@@ -1,4 +1,4 @@
-//TO COMPILE: g++ intrinsics.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -march=native -o intrinsics
+//TO COMPILE: g++ intrinsics.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -march=native -DNDEBUG -o intrinsics
 
 #include <benchmark/benchmark.h>
 #include <x86intrin.h>

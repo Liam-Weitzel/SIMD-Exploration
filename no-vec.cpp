@@ -1,4 +1,4 @@
-//TO COMPILE: g++ no-vec.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -march=native -o no-vec
+//TO COMPILE: g++ no-vec.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -DNDEBUG -o no-vec
 
 #include <benchmark/benchmark.h>
 

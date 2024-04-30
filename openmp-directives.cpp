@@ -1,4 +1,4 @@
-//TO COMPILE: g++ auto-vec.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -march=native -ftree-vectorize -DNDEBUG -o auto-vec
+//TO COMPILE: g++ openmp-directives.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -fopenmp -march=native -DNDEBUG -o openmp-directives
 
 #include <benchmark/benchmark.h>
 
@@ -8,6 +8,7 @@ void BM_AddVectors(benchmark::State& state) {
   double result[4];
 
   for (auto _ : state) {
+    #pragma omp simd
     for(int i = 0; i < 4; ++i) {
       result[i] = data_a[i] + data_b[i];
     }

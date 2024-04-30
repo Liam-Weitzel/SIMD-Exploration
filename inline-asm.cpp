@@ -1,4 +1,4 @@
-//TO COMPILE: g++ inline-asm.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -march=native -o inline-asm
+//TO COMPILE: g++ inline-asm.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -march=native -DNDEBUG -o inline-asm
 #include <benchmark/benchmark.h>
 
 void BM_AddVectors(benchmark::State& state) {
