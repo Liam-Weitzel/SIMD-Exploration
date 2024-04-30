@@ -20,4 +20,38 @@ void BM_AddVectors(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_AddVectors)->Args({1, 2, 3, 4});
+
+void BM_FindInVector(benchmark::State& state) {
+  int target = state.range(0);
+  int N = state.range(1);
+  int vector[N];
+  vector[state.range(2)] = target;
+  int res = -1;
+
+  for (auto _ : state) {
+    std::experimental::fixed_size_simd<int, 8> simd_target(target);
+
+    for (int i = 0; i < N; i += 8) {
+      std::experimental::fixed_size_simd<int, 8> simd_vector(&vector[i], std::experimental::vector_aligned);
+      auto mask = simd_vector == simd_target;
+
+      if (std::experimental::any_of(mask)) {
+        for (int j = 0; j < mask.size(); ++j) {
+          if (mask[j]) {
+            res = i + j;
+            break;
+          }
+        }
+        if (res != -1) {
+          break;
+        }
+      }
+    }
+
+    benchmark::DoNotOptimize(res);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254});
+
 BENCHMARK_MAIN();
