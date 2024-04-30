@@ -49,7 +49,7 @@ void BM_FindInVector(benchmark::State& state) {
 }
 BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254});
 
-void BM_FindInVectorFAST(benchmark::State& state) {
+void BM_FindInVectorFaster(benchmark::State& state) {
   int target = state.range(0);
   int N = state.range(1);
   int vector[N];
@@ -59,7 +59,6 @@ void BM_FindInVectorFAST(benchmark::State& state) {
 
   for (auto _ : state) {
     __m256i x = _mm256_set1_epi32(target);
-
     for (int i = 0; i < N; i += 32) {
       __m256i y1 = _mm256_load_si256((__m256i*) &vector[i]);
       __m256i m1 = _mm256_cmpeq_epi32(x, y1);
@@ -100,7 +99,7 @@ void BM_FindInVectorFAST(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_FindInVectorFAST)->Args({456, 4096, 3254});
+BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
 //TODO: use fill on all arrays
 //NOTE: is this FAST version worth looking into?
 
