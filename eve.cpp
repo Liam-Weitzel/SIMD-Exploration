@@ -3,6 +3,7 @@
 #include <benchmark/benchmark.h>
 #include <algorithm>
 #include <eve/eve.hpp>
+#include <numeric>
 
 void BM_AddVectors(benchmark::State& state) {
   double data_a[4] = {(double) state.range(0), (double) state.range(1), (double) state.range(2), (double) state.range(3)};
@@ -104,5 +105,37 @@ void BM_FindInVectorFaster(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
+
+void BM_SumVector(benchmark::State& state) {
+  int N = state.range(1)-state.range(0);
+  int vector[N];
+  std::iota (vector, vector + N, state.range(0));
+  int res;
+
+  for (auto _ : state) {
+    res = 0;
+    eve::wide<int, eve::fixed<8>> s1(0);
+    eve::wide<int, eve::fixed<8>> s2(0);
+    
+    for (int i = 0; i < N; i += 16) {
+      eve::wide<int, eve::fixed<8>> simd_vector1 = eve::load(&vector[i]);
+      eve::wide<int, eve::fixed<8>> simd_vector2 = eve::load(&vector[i + 8]);
+      s1 = s1 + simd_vector1;
+      s2 = s2 + simd_vector2;
+    }
+
+    eve::wide<int, eve::fixed<8>> s = s1 + s2;
+    int t[8];
+
+    eve::store(s, t); 
+    
+    for (int i = 0; i < 8; ++i) 
+      res += t[i];
+
+    benchmark::DoNotOptimize(res);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_SumVector)->Args({0, 4096});
 
 BENCHMARK_MAIN();

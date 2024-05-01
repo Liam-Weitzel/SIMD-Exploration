@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <benchmark/benchmark.h>
 #include <experimental/simd>
+#include <numeric>
 
 void BM_AddVectors(benchmark::State& state) {
   double data_a[4] = {(double) state.range(0), (double) state.range(1), (double) state.range(2), (double) state.range(3)};
@@ -44,9 +45,7 @@ void BM_FindInVector(benchmark::State& state) {
             break;
           }
         }
-        if (res != -1) {
-          break;
-        }
+        break;
       }
     }
 
@@ -124,5 +123,38 @@ void BM_FindInVectorFaster(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
+
+void BM_SumVector(benchmark::State& state) {
+  int N = state.range(1)-state.range(0);
+  int vector[N];
+  std::iota (vector, vector + N, state.range(0));
+  int res;
+
+  for (auto _ : state) {
+    res = 0;
+    std::experimental::fixed_size_simd<int, 8> s1(0);
+    std::experimental::fixed_size_simd<int, 8> s2(0);
+    
+
+    for (int i = 0; i < N; i += 16) {
+      std::experimental::fixed_size_simd<int, 8> simd_vector1(&vector[i], std::experimental::vector_aligned);
+      std::experimental::fixed_size_simd<int, 8> simd_vector2(&vector[i + 8], std::experimental::vector_aligned);
+      s1 = s1 + simd_vector1;
+      s2 = s2 + simd_vector2;
+    }
+
+    std::experimental::fixed_size_simd<int, 8> s = s1 + s2;
+    alignas(std::experimental::memory_alignment_v<std::experimental::fixed_size_simd<int, 8>>) int t[8];
+
+    s.copy_to(t, std::experimental::vector_aligned);
+    
+    for (int i = 0; i < 8; ++i) 
+      res += t[i];
+
+    benchmark::DoNotOptimize(res);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_SumVector)->Args({0, 4096});
 
 BENCHMARK_MAIN();

@@ -1,6 +1,7 @@
 //TO COMPILE: g++ inline-asm.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -march=native -DNDEBUG -o inline-asm
 #include <algorithm>
 #include <benchmark/benchmark.h>
+#include <numeric>
 
 void BM_AddVectors(benchmark::State& state) {
   double data_a[4] = {(double) state.range(0), (double) state.range(1), (double) state.range(2), (double) state.range(3)};
@@ -152,5 +153,46 @@ void BM_FindInVectorFaster(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
+
+void BM_SumVector(benchmark::State& state) {
+  int N = state.range(1) - state.range(0);
+  int vector[N];
+  std::iota(vector, vector + N, state.range(0));
+  int res;
+
+  for (auto _ : state) {
+    asm volatile (
+      "vxorps %%ymm1, %%ymm1, %%ymm1\n\t" // Zero out ymm1
+      "vxorps %%ymm2, %%ymm2, %%ymm2\n\t" // Zero out ymm2
+      "mov %[N], %%ecx\n\t"               // Move N into ecx
+      "lea %[vector], %%rdi\n\t"          // Load address of vector into rdi
+
+      ".p2align 4\n\t"
+      "1:\n\t"
+      "vpaddd (%%rdi), %%ymm1, %%ymm1\n\t" // Add 8 integers from vector to ymm1
+      "vpaddd 32(%%rdi), %%ymm2, %%ymm2\n\t" // Add next 8 integers to ymm2
+      "add $64, %%rdi\n\t"               // Move to the next 16 integers
+      "sub $16, %%ecx\n\t"               // Decrement loop counter by 16
+      "jg 1b\n\t"                        // Jump back if still more than 16 elements left
+
+      "vpaddd %%ymm2, %%ymm1, %%ymm1\n\t" // Add sums from ymm2 and ymm1
+      "vextracti128 $1, %%ymm1, %%xmm2\n\t" // Extract the upper 128 bits
+      "vpaddd %%xmm2, %%xmm1, %%xmm1\n\t" // Add upper 128 to lower 128
+      "vpshufd $0x4e, %%xmm1, %%xmm2\n\t" // Shuffle to prepare for final addition
+      "vpaddd %%xmm2, %%xmm1, %%xmm1\n\t" // Horizontal add
+      "vpshufd $0xb1, %%xmm1, %%xmm2\n\t" // Another shuffle
+      "vpaddd %%xmm2, %%xmm1, %%xmm1\n\t" // Add to get final sum in the lowest dword
+      "vmovd %%xmm1, %[res]\n\t"          // Move result to scalar register
+
+      : [res] "=r" (res) // Output
+      : "[res]" (res), "m" (vector[0]), [vector] "m" (vector), [N] "r" (N) // Inputs
+      : "%ymm1", "%ymm2", "%xmm1", "%xmm2", "%rdi", "%ecx", "memory", "cc" // Clobbers
+    );
+
+    benchmark::DoNotOptimize(res);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_SumVector)->Args({0, 4096});
 
 BENCHMARK_MAIN();

@@ -1,6 +1,7 @@
 //TO COMPILE: g++ xsimd.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -march=native -DNDEBUG -I/usr/local/include/xsimd -o xsimd
 
 #define XSIMD_DEFAULT_ARCH xsimd::avx2
+#include <numeric>
 #include <algorithm>
 #include "xsimd/xsimd.hpp"
 #include <benchmark/benchmark.h>
@@ -125,5 +126,38 @@ void BM_FindInVectorFaster(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
+
+void BM_SumVector(benchmark::State& state) {
+  int N = state.range(1)-state.range(0);
+  int vector[N];
+  std::iota (vector, vector + N, state.range(0));
+  int res;
+
+  using batch_type = xsimd::batch<int, xsimd::avx2>;
+  for (auto _ : state) {
+    res = 0;
+    batch_type s1(0);
+    batch_type s2(0);
+    
+    for (int i = 0; i < N; i += 16) {
+      batch_type simd_vector1 = xsimd::load_aligned(&vector[i]);
+      batch_type simd_vector2 = xsimd::load_aligned(&vector[i + 8]);
+      s1 = s1 + simd_vector1;
+      s2 = s2 + simd_vector2;
+    }
+
+    batch_type s = s1 + s2;
+    int t[8];
+
+    s.store_aligned(&t[0]);
+    
+    for (int i = 0; i < 8; ++i) 
+      res += t[i];
+
+    benchmark::DoNotOptimize(res);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_SumVector)->Args({0, 4096});
 
 BENCHMARK_MAIN();
