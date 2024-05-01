@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <benchmark/benchmark.h>
+#include <numeric>
 #include <x86intrin.h>
 
 void BM_AddVectors(benchmark::State& state) {
@@ -100,6 +101,36 @@ void BM_FindInVectorFaster(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
+
+void BM_SumVector(benchmark::State& state) {
+  int N = state.range(1)-state.range(0);
+  int vector[N];
+  std::iota (vector, vector + N, state.range(0));
+  int res;
+
+  for (auto _ : state) {
+    res = 0;
+    __m256i s1 = _mm256_setzero_si256();
+    __m256i s2 = _mm256_setzero_si256();
+    
+    for (int i = 0; i < N; i += 16) {
+      s1 = _mm256_add_epi32(s1, _mm256_load_si256((__m256i*) &vector[i]));
+      s2 = _mm256_add_epi32(s2, _mm256_load_si256((__m256i*) &vector[i + 8]));
+    }
+
+    __m256i s = _mm256_add_epi32(s1, s2);
+    int t[8];
+
+    _mm256_storeu_si256((__m256i*) t, s);
+    
+    for (int i = 0; i < 8; ++i) 
+      res += t[i];
+
+    benchmark::DoNotOptimize(res);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_SumVector)->Args({0, 4096});
 //TODO: use ->MinTime(0.5) on all calcs so we can easily calculate throughput
 
 BENCHMARK_MAIN();

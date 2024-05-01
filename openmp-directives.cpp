@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <benchmark/benchmark.h>
+#include <numeric>
 
 void BM_AddVectors(benchmark::State& state) {
   double data_a[4] = {(double) state.range(0), (double) state.range(1), (double) state.range(2), (double) state.range(3)};
@@ -39,5 +40,24 @@ void BM_FindInVector(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254});
+
+void BM_SumVector(benchmark::State& state) {
+  int N = state.range(1)-state.range(0);
+  int vector[N];
+  std::iota (vector, vector + N, state.range(0));
+  int res;
+
+  for (auto _ : state) {
+    int res = 0;
+    #pragma omp simd
+    for( int i = 0; i < N; ++i ) {
+      res += vector[i];
+    }
+
+    benchmark::DoNotOptimize(res);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_SumVector)->Args({0, 4096});
 
 BENCHMARK_MAIN();
