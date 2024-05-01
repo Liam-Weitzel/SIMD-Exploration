@@ -1,5 +1,6 @@
 //TO COMPILE: g++ no-vec.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -DNDEBUG -o no-vec
 
+#include <algorithm>
 #include <benchmark/benchmark.h>
 
 void BM_AddVectors(benchmark::State& state) {
@@ -22,6 +23,7 @@ void BM_FindInVector(benchmark::State& state) {
   int target = state.range(0);
   int N = state.range(1);
   int vector[N];
+  std::fill(vector, vector + N, 0);
   vector[state.range(2)] = target;
   int res = -1;
 

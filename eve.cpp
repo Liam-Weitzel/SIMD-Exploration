@@ -1,6 +1,7 @@
 //TO COMPILE: g++ eve.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -march=native -DNDEBUG -I/usr/local/include/eve -o eve
 
 #include <benchmark/benchmark.h>
+#include <algorithm>
 #include <eve/eve.hpp>
 
 void BM_AddVectors(benchmark::State& state) {
@@ -24,23 +25,22 @@ void BM_AddVectors(benchmark::State& state) {
 }
 BENCHMARK(BM_AddVectors)->Args({1, 2, 3, 4});
 
-void BM_FindInVector_Eve(benchmark::State& state) {
+void BM_FindInVector(benchmark::State& state) {
   int target = state.range(0);
   int N = state.range(1);
   int vector[N];
+  std::fill(vector, vector + N, 0);
   vector[state.range(2)] = target;
   int res = -1;
 
   for (auto _ : state) {
-    eve::wide<int, eve::fixed<8>> eve_target(target);
-    int res = -1;
+    eve::wide<int, eve::fixed<8>> simd_target(target);
 
     for (int i = 0; i < N; i += 8) {
-      eve::wide<int, eve::fixed<8>> eve_vector = eve::load(&vector[i]);
-      auto matches = eve_target == eve_vector;
-      auto index = eve::first_true(matches);
-
-      if (index) {
+      eve::wide<int, eve::fixed<8>> simd_vector = eve::load(&vector[i]);
+      auto matches = simd_target == simd_vector;
+      if (eve::any(matches)) {
+        auto index = eve::first_true(matches);
         res = i + *index;
         break;
       }
@@ -50,6 +50,59 @@ void BM_FindInVector_Eve(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_FindInVector_Eve)->Args({456, 4096, 3254});
+BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254});
+
+void BM_FindInVectorFaster(benchmark::State& state) {
+  int target = state.range(0);
+  int N = state.range(1);
+  int vector[N];
+  std::fill(vector, vector + N, 0);
+  vector[state.range(2)] = target;
+  int res = -1;
+
+  for (auto _ : state) {
+    eve::wide<int, eve::fixed<8>> simd_target(target);
+
+    for (int i = 0; i < N; i += 32) {
+      eve::wide<int, eve::fixed<8>> simd_vector1 = eve::load(&vector[i]);
+      eve::wide<int, eve::fixed<8>> simd_vector2 = eve::load(&vector[i + 8]);
+      eve::wide<int, eve::fixed<8>> simd_vector3 = eve::load(&vector[i + 16]);
+      eve::wide<int, eve::fixed<8>> simd_vector4 = eve::load(&vector[i + 24]);
+      auto mask1 = simd_vector1 == simd_target;
+      auto mask2 = simd_vector2 == simd_target;
+      auto mask12 = mask1 || mask2;
+      auto mask3 = simd_vector3 == simd_target;
+      auto mask4 = simd_vector4 == simd_target;
+      auto mask23 = mask3 || mask4;
+      auto mask = mask12 || mask23;
+      if (eve::any(mask)) {
+        if(eve::any(mask1)) {
+          auto index = eve::first_true(mask1);
+          res = i + *index;
+          break;
+        }
+        if(eve::any(mask2)) {
+          auto index = eve::first_true(mask2);
+          res = i + *index + 8;
+          break;
+        }
+        if(eve::any(mask3)) {
+          auto index = eve::first_true(mask3);
+          res = i + *index + 16;
+          break;
+        }
+        if(eve::any(mask4)) {
+          auto index = eve::first_true(mask4);
+          res = i + *index + 24;
+          break;
+        }
+      }
+    }
+    
+    benchmark::DoNotOptimize(res);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
 
 BENCHMARK_MAIN();

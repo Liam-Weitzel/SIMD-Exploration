@@ -100,8 +100,6 @@ void BM_FindInVectorFaster(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
-//TODO: use fill on all arrays
-//NOTE: is this FAST version worth looking into?
-
+//TODO: use ->MinTime(0.5) on all calcs so we can easily calculate throughput
 
 BENCHMARK_MAIN();

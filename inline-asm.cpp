@@ -1,4 +1,5 @@
 //TO COMPILE: g++ inline-asm.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -march=native -DNDEBUG -o inline-asm
+#include <algorithm>
 #include <benchmark/benchmark.h>
 
 void BM_AddVectors(benchmark::State& state) {
@@ -27,6 +28,7 @@ void BM_FindInVector(benchmark::State& state) {
   int target = state.range(0);
   int N = state.range(1);
   int vector[N];
+  std::fill(vector, vector + N, 0);
   vector[state.range(2)] = target;
   int res = -1;
 
@@ -71,5 +73,84 @@ void BM_FindInVector(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254});
+
+void BM_FindInVectorFaster(benchmark::State& state) {
+  int target = state.range(0);
+  int N = state.range(1);
+  alignas(32) int vector[N];
+  std::fill_n(vector, N, 0);
+  vector[state.range(2)] = target;
+  int res = -1;
+
+  for (auto _ : state) {
+    asm volatile (
+        "vmovd %[target], %%xmm0\n\t"
+        "vpbroadcastd %%xmm0, %%ymm0\n\t"
+        "xor %%eax, %%eax\n\t" // Loop index set to zero
+        "1:\n\t"
+        "cmp %[N], %%eax\n\t"
+        "jge 3f\n\t" // Jump to end if index exceeds N
+                     // Load and compare sets of 8 integers
+        "vmovdqu (%[vec], %%rax, 4), %%ymm1\n\t"
+        "vpcmpeqd %%ymm0, %%ymm1, %%ymm1\n\t"
+        "vmovdqu 32(%[vec], %%rax, 4), %%ymm2\n\t"
+        "vpcmpeqd %%ymm0, %%ymm2, %%ymm2\n\t"
+        "vmovdqu 64(%[vec], %%rax, 4), %%ymm3\n\t"
+        "vpcmpeqd %%ymm0, %%ymm3, %%ymm3\n\t"
+        "vmovdqu 96(%[vec], %%rax, 4), %%ymm4\n\t"
+        "vpcmpeqd %%ymm0, %%ymm4, %%ymm4\n\t"
+        // Combine results
+        "vpor %%ymm2, %%ymm1, %%ymm5\n\t"
+        "vpor %%ymm3, %%ymm4, %%ymm6\n\t"
+        "vpor %%ymm5, %%ymm6, %%ymm7\n\t"
+        "vmovmskps %%ymm7, %%edi\n\t"
+        "test %%edi, %%edi\n\t"
+        "jz 2f\n\t" // If zero, no matches, jump to next iteration
+                    // Check each mask individually if combined mask shows a match
+        "vmovmskps %%ymm1, %%edi\n\t"
+        "test %%edi, %%edi\n\t"
+        "jz 4f\n\t"
+        "tzcnt %%edi, %%edi\n\t"
+        "add %%eax, %%edi\n\t"
+        "mov %%edi, %[res]\n\t"
+        "jmp 3f\n\t"
+        "4:\n\t"
+        "vmovmskps %%ymm2, %%edi\n\t"
+        "test %%edi, %%edi\n\t"
+        "jz 5f\n\t"
+        "tzcnt %%edi, %%edi\n\t"
+        "add $8, %%edi\n\t"
+        "add %%eax, %%edi\n\t"
+        "mov %%edi, %[res]\n\t"
+        "jmp 3f\n\t"
+        "5:\n\t"
+        "vmovmskps %%ymm3, %%edi\n\t"
+        "test %%edi, %%edi\n\t"
+        "jz 6f\n\t"
+        "tzcnt %%edi, %%edi\n\t"
+        "add $16, %%edi\n\t"
+        "add %%eax, %%edi\n\t"
+        "mov %%edi, %[res]\n\t"
+        "jmp 3f\n\t"
+        "6:\n\t"
+        "vmovmskps %%ymm4, %%edi\n\t"
+        "tzcnt %%edi, %%edi\n\t"
+        "add $24, %%edi\n\t"
+        "add %%eax, %%edi\n\t"
+        "mov %%edi, %[res]\n\t"
+        "2:\n\t"
+        "add $32, %%eax\n\t"
+        "jmp 1b\n\t" // Continue loop
+        "3:\n\t"
+        : [res] "+r" (res)  // Output
+        : [target] "r" (target), [vec] "r" (vector), [N] "r" (N)  // Inputs
+        : "eax", "edi", "xmm0", "ymm0", "ymm1", "ymm2", "ymm3", "ymm4", "ymm5", "ymm6", "ymm7", "cc", "memory"  // Clobbers
+      );
+
+    benchmark::DoNotOptimize(res);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
 
 BENCHMARK_MAIN();

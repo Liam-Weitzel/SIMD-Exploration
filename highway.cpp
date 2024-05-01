@@ -1,6 +1,7 @@
 //TO COMPILE: sudo g++ highway.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -march=native -DNDEBUG -I/usr/local/include/hwy -o highway
 
 #define HWY_TARGETS N_AVX2
+#include <algorithm>
 #include <hwy/highway.h>
 #include <benchmark/benchmark.h>
 
@@ -26,6 +27,7 @@ void BM_FindInVector(benchmark::State& state) {
   int target = state.range(0);
   int N = state.range(1);
   int vector[N];
+  std::fill(vector, vector + N, 0);
   vector[state.range(2)] = target;
   int res = -1;
 
@@ -47,5 +49,55 @@ void BM_FindInVector(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254});
+
+void BM_FindInVectorFaster(benchmark::State& state) {
+  int target = state.range(0);
+  int N = state.range(1);
+  int vector[N];
+  std::fill(vector, vector + N, 0);
+  vector[state.range(2)] = target;
+  int res = -1;
+
+  for (auto _ : state) {
+    const HWY_FULL(int) d;
+    auto x = hwy::N_AVX2::Set(d, target);
+
+    for (int i = 0; i < N; i += 32) {
+      auto y1 = hwy::N_AVX2::Load(d, &vector[i]);
+      auto m1 = hwy::N_AVX2::Eq(x, y1);
+      auto y2 = hwy::N_AVX2::Load(d, &vector[i + 8]);
+      auto m2 = hwy::N_AVX2::Eq(x, y2);
+      auto y3 = hwy::N_AVX2::Load(d, &vector[i + 16]);
+      auto m3 = hwy::N_AVX2::Eq(x, y3);
+      auto y4 = hwy::N_AVX2::Load(d, &vector[i + 24]);
+      auto m4 = hwy::N_AVX2::Eq(x, y4);
+      auto m12 = hwy::N_AVX2::Or(m1, m2);
+      auto m34 = hwy::N_AVX2::Or(m3, m4);
+      auto m = hwy::N_AVX2::Or(m12, m34);
+      if (!hwy::N_AVX2::AllFalse(d, m)) {
+        if (!hwy::N_AVX2::AllFalse(d, m1)) {
+          res = i + hwy::N_AVX2::FindFirstTrue(d, m1);
+          break;
+        }
+        if (!hwy::N_AVX2::AllFalse(d, m2)) {
+          res = i + hwy::N_AVX2::FindFirstTrue(d, m2) + 8;
+          break;
+        }
+        if (!hwy::N_AVX2::AllFalse(d, m3)) {
+          res = i + hwy::N_AVX2::FindFirstTrue(d, m3) + 16;
+          break;
+        }
+        if (!hwy::N_AVX2::AllFalse(d, m4)) {
+          res = i + hwy::N_AVX2::FindFirstTrue(d, m4) + 24;
+          break;
+        }
+      }
+    }
+
+    benchmark::DoNotOptimize(res);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
 
 BENCHMARK_MAIN();
