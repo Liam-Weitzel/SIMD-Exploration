@@ -22,7 +22,7 @@ void BM_AddVectors(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_AddVectors)->Args({1, 2, 3, 4});
+BENCHMARK(BM_AddVectors)->Args({1, 2, 3, 4})->MinTime(0.5)->Repetitions(1000);
 
 void BM_FindInVector(benchmark::State& state) {
   int target = state.range(0);
@@ -55,7 +55,7 @@ void BM_FindInVector(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254});
+BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254})->MinTime(0.5)->Repetitions(1000);
 
 void BM_FindInVectorFaster(benchmark::State& state) {
   int target = state.range(0);
@@ -125,7 +125,7 @@ void BM_FindInVectorFaster(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
+BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254})->MinTime(0.5)->Repetitions(1000);
 
 void BM_SumVector(benchmark::State& state) {
   int N = state.range(1)-state.range(0);
@@ -158,6 +158,29 @@ void BM_SumVector(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_SumVector)->Args({0, 4096});
+BENCHMARK(BM_SumVector)->Args({0, 4096})->MinTime(0.5)->Repetitions(1000);
+
+void BM_ReverseVector(benchmark::State& state) {
+  int N = state.range(1) - state.range(0);
+  int vector[N];
+  std::iota (vector, vector + N, state.range(0));
+
+  using batch_type = xsimd::batch<int, xsimd::avx2>;
+  for (auto _ : state) {
+    for (int i = 0; i < N / 2; i += 8) {
+      batch_type simd_vector1 = xsimd::load_aligned(&vector[i]);
+      batch_type simd_vector2 = xsimd::load_aligned(&vector[N - i - 8]);
+
+      simd_vector1 = xsimd::rotate_left<8>(simd_vector1);
+      simd_vector2 = xsimd::rotate_left<8>(simd_vector2);
+
+      simd_vector2.store_aligned(&vector[i]);
+      simd_vector1.store_aligned(&vector[N - i - 8]);
+    }
+
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_ReverseVector)->Args({0, 4096})->MinTime(0.5)->Repetitions(1000);
 
 BENCHMARK_MAIN();

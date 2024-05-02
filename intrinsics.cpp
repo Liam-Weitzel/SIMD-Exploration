@@ -21,7 +21,7 @@ void BM_AddVectors(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_AddVectors)->Args({1, 2, 3, 4});
+BENCHMARK(BM_AddVectors)->Args({1, 2, 3, 4})->MinTime(0.5)->Repetitions(1000);
 
 void BM_FindInVector(benchmark::State& state) {
   int target = state.range(0);
@@ -48,7 +48,7 @@ void BM_FindInVector(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254});
+BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254})->MinTime(0.5)->Repetitions(1000);
 
 void BM_FindInVectorFaster(benchmark::State& state) {
   int target = state.range(0);
@@ -100,7 +100,7 @@ void BM_FindInVectorFaster(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
+BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254})->MinTime(0.5)->Repetitions(1000);
 
 void BM_SumVector(benchmark::State& state) {
   int N = state.range(1)-state.range(0);
@@ -130,7 +130,27 @@ void BM_SumVector(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_SumVector)->Args({0, 4096});
-//TODO: use ->MinTime(0.5) on all calcs so we can easily calculate throughput
+BENCHMARK(BM_SumVector)->Args({0, 4096})->MinTime(0.5)->Repetitions(1000);
+
+void BM_ReverseVector(benchmark::State& state) {
+  int N = state.range(1)-state.range(0);
+  int vector[N];
+  std::iota (vector, vector + N, state.range(0));
+  const __m256i reversePermutation = _mm256_setr_epi32(7,6,5,4,3,2,1,0);
+
+  for (auto _ : state) {
+    for (int i = 0; i < N / 2; i += 8) {
+      __m256i x = _mm256_loadu_si256((__m256i*) &vector[i]);
+      __m256i y = _mm256_loadu_si256((__m256i*) &vector[N - i - 8]);
+      _mm256_permutevar8x32_epi32(x, reversePermutation);
+      _mm256_permutevar8x32_epi32(y, reversePermutation);
+      _mm256_storeu_si256((__m256i*) &vector[N - i - 8], x);
+      _mm256_storeu_si256((__m256i*) &vector[i], y);
+    }
+
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_ReverseVector)->Args({0, 4096})->MinTime(0.5)->Repetitions(1000);
 
 BENCHMARK_MAIN();

@@ -21,7 +21,7 @@ void BM_AddVectors(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_AddVectors)->Args({1, 2, 3, 4});
+BENCHMARK(BM_AddVectors)->Args({1, 2, 3, 4})->MinTime(0.5)->Repetitions(1000);
 
 void BM_FindInVector(benchmark::State& state) {
   int target = state.range(0);
@@ -53,7 +53,7 @@ void BM_FindInVector(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254});
+BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254})->MinTime(0.5)->Repetitions(1000);
 
 void BM_FindInVectorFaster(benchmark::State& state) {
   int target = state.range(0);
@@ -122,7 +122,7 @@ void BM_FindInVectorFaster(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
+BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254})->MinTime(0.5)->Repetitions(1000);
 
 void BM_SumVector(benchmark::State& state) {
   int N = state.range(1)-state.range(0);
@@ -155,6 +155,35 @@ void BM_SumVector(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_SumVector)->Args({0, 4096});
+BENCHMARK(BM_SumVector)->Args({0, 4096})->MinTime(0.5)->Repetitions(1000);
+
+void BM_ReverseVector(benchmark::State& state) {
+  int N = state.range(1) - state.range(0);
+  int vector[N];
+  std::iota (vector, vector + N, state.range(0));
+
+  for (auto _ : state) {
+    for (int i = 0; i < N / 2; i += 8) {
+      std::experimental::fixed_size_simd<int, 8> simd_vector1(&vector[i], std::experimental::vector_aligned);
+      std::experimental::fixed_size_simd<int, 8> simd_vector2(&vector[N - i - 8], std::experimental::vector_aligned);
+
+      std::array<int, 8> temp1, temp2;
+      for (int j = 0; j < 8; ++j) {
+          temp1[j] = simd_vector1[j];
+          temp2[j] = simd_vector2[j];
+      }
+      for (int j = 0; j < 8; ++j) {
+          simd_vector1[j] = temp2[7 - j];
+          simd_vector2[j] = temp1[7 - j];
+      }
+
+      simd_vector1.copy_to(&vector[i], std::experimental::vector_aligned);
+      simd_vector2.copy_to(&vector[N - i - 8], std::experimental::vector_aligned);
+    }
+
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_ReverseVector)->Args({0, 4096})->MinTime(0.5)->Repetitions(1000);
 
 BENCHMARK_MAIN();

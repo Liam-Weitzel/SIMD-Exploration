@@ -22,7 +22,7 @@ void BM_AddVectors(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_AddVectors)->Args({1, 2, 3, 4});
+BENCHMARK(BM_AddVectors)->Args({1, 2, 3, 4})->MinTime(0.5)->Repetitions(1000);
 
 void BM_FindInVector(benchmark::State& state) {
   int target = state.range(0);
@@ -49,7 +49,7 @@ void BM_FindInVector(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254});
+BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254})->MinTime(0.5)->Repetitions(1000);
 
 void BM_FindInVectorFaster(benchmark::State& state) {
   int target = state.range(0);
@@ -99,7 +99,7 @@ void BM_FindInVectorFaster(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
+BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254})->MinTime(0.5)->Repetitions(1000);
 
 void BM_SumVector(benchmark::State& state) {
   int N = state.range(1)-state.range(0);
@@ -132,6 +132,28 @@ void BM_SumVector(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_SumVector)->Args({0, 4096});
+BENCHMARK(BM_SumVector)->Args({0, 4096})->MinTime(0.5)->Repetitions(1000);
+
+void BM_ReverseVector(benchmark::State& state) {
+  int N = state.range(1) - state.range(0);
+  int vector[N];
+  std::iota (vector, vector + N, state.range(0));
+
+  for (auto _ : state) {
+    const HWY_FULL(int) d;
+    for (int i = 0; i < N / 2; i += 8) {
+      auto simd_vector1 = hwy::N_AVX2::Load(d, &vector[i]);
+      auto simd_vector2 = hwy::N_AVX2::Load(d, &vector[N - i - 8]);
+
+      hwy::N_AVX2::Reverse(d, simd_vector1);
+      hwy::N_AVX2::Reverse(d, simd_vector2);
+
+      hwy::N_AVX2::Store(simd_vector2, d, &vector[i]);
+      hwy::N_AVX2::Store(simd_vector1, d, &vector[N - i - 8]);
+    }
+
+    benchmark::ClobberMemory();
+  }
+}BENCHMARK(BM_ReverseVector)->Args({0, 4096})->MinTime(0.5)->Repetitions(1000);
 
 BENCHMARK_MAIN();

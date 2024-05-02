@@ -1,6 +1,7 @@
 //TO COMPILE: g++ inline-asm.cpp -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -std=c++2a -O3 -fno-tree-vectorize -march=native -DNDEBUG -o inline-asm
 #include <algorithm>
 #include <benchmark/benchmark.h>
+#include <immintrin.h>
 #include <numeric>
 
 void BM_AddVectors(benchmark::State& state) {
@@ -23,7 +24,7 @@ void BM_AddVectors(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_AddVectors)->Args({1, 2, 3, 4});
+BENCHMARK(BM_AddVectors)->Args({1, 2, 3, 4})->MinTime(0.5)->Repetitions(1000);
 
 void BM_FindInVector(benchmark::State& state) {
   int target = state.range(0);
@@ -73,7 +74,7 @@ void BM_FindInVector(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254});
+BENCHMARK(BM_FindInVector)->Args({456, 4096, 3254})->MinTime(0.5)->Repetitions(1000);
 
 void BM_FindInVectorFaster(benchmark::State& state) {
   int target = state.range(0);
@@ -152,7 +153,7 @@ void BM_FindInVectorFaster(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254});
+BENCHMARK(BM_FindInVectorFaster)->Args({456, 4096, 3254})->MinTime(0.5)->Repetitions(1000);
 
 void BM_SumVector(benchmark::State& state) {
   int N = state.range(1) - state.range(0);
@@ -193,6 +194,39 @@ void BM_SumVector(benchmark::State& state) {
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(BM_SumVector)->Args({0, 4096});
+BENCHMARK(BM_SumVector)->Args({0, 4096})->MinTime(0.5)->Repetitions(1000);
+
+void BM_ReverseVector(benchmark::State& state) {
+    int N = state.range(1) - state.range(0);
+    int vector[N];
+    std::iota(vector, vector + N, state.range(0));
+    int reversePermutation[8] = {7, 6, 5, 4, 3, 2, 1, 0};
+
+    for (auto _ : state) {
+        asm volatile (
+            "mov %[N], %%ecx\n\t"               // Load N into ECX
+            "shr $3, %%ecx\n\t"                 // Divide by 8 to get number of iterations
+            "mov %[vec], %%rsi\n\t"             // Load address of vector into RSI
+            "1:\n\t"
+            "movdqu (%%rsi), %%xmm0\n\t"      // Load 8 integers into XMM0
+            "movdqu 32(%%rsi), %%xmm1\n\t" // Load next 8 integers in reverse order into XMM1
+            "movdqa %%xmm1, %%xmm2\n\t"         // Copy XMM1 to XMM2
+            "movdqa %[perm], %%xmm3\n\t"        // Load reversePermutation into XMM3
+            "pshufb %%xmm3, %%xmm0\n\t"         // Permute XMM0 according to reversePermutation
+            "pshufb %%xmm3, %%xmm2\n\t"         // Permute XMM2 according to reversePermutation
+            "movdqu %%xmm0, (%%rsi)\n\t"      // Store XMM0 back to original location
+            "movdqu %%xmm2, 32(%%rsi)\n\t" // Store XMM2 back to reverse location
+            "add $64, %%rsi\n\t"               // Increment vector pointer by 64 bytes (8 integers)
+            "dec %%ecx\n\t"                     // Decrement loop counter
+            "jnz 1b\n\t"                        // Jump to label 1 if ECX is not zero
+            :
+            : [N] "r" (N / 2), [vec] "r" (vector), [perm] "m" (reversePermutation)
+            : "%ecx", "%rsi", "memory", "xmm0", "xmm1", "xmm2", "xmm3"
+        );
+
+        benchmark::ClobberMemory();
+    }
+}
+BENCHMARK(BM_ReverseVector)->Args({0, 4096})->MinTime(0.5)->Repetitions(1000);
 
 BENCHMARK_MAIN();
