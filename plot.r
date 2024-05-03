@@ -35,10 +35,14 @@ barchart <- ggplot(data=Data_BMAddVectors, aes(x = library,
 
 ggsave("BMAddVectors_bar.png", plot=barchart, width=14, height=5, dpi=300)
 
-leveneTest(execution_time ~ library, data = Data_BMReverseVector)
-res.aov <- aov(execution_time ~ library, data = Data_BMReverseVector)
-summary(res.aov)
-TukeyHSD(res.aov)
+res.lev <- leveneTest(execution_time ~ library, data = Data_BMAddVectors)
+res.aov <- aov(execution_time ~ library, data = Data_BMAddVectors)
+sum.lev <- summary(res.lev)
+capture.output(sum.lev, append = TRUE, file = "BMAddVectors_res.txt")
+sum.aov <- summary(res.aov)
+capture.output(sum.aov, append = TRUE, file = "BMAddVectors_res.txt")
+sum.tuk <- TukeyHSD(res.aov)
+capture.output(sum.tuk, append = TRUE, file = "BMAddVectors_res.txt")
 
 Data_BMFindInVector <- Data %>% filter(benchmark == "BM_FindInVector/456/4096/3254/min_time:0.500/repeats:1000")
 Data_BMFindInVector <- Data_BMFindInVector %>% filter(library != "no-vec")
@@ -63,10 +67,14 @@ barchart <- ggplot(data=Data_BMFindInVector, aes(x = library,
 
 ggsave("BMFindInVector_box.png", plot=barchart, width=14, height=5, dpi=300)
 
-leveneTest(execution_time ~ library, data = Data_BMReverseVector)
-res.aov <- aov(execution_time ~ library, data = Data_BMReverseVector)
-summary(res.aov)
-TukeyHSD(res.aov)
+res.lev <- leveneTest(execution_time ~ library, data = Data_BMFindInVector)
+res.aov <- aov(execution_time ~ library, data = Data_BMFindInVector)
+sum.lev <- summary(res.lev)
+capture.output(sum.lev, append = TRUE, file = "BMFindInVector_res.txt")
+sum.aov <- summary(res.aov)
+capture.output(sum.aov, append = TRUE, file = "BMFindInVector_res.txt")
+sum.tuk <- TukeyHSD(res.aov)
+capture.output(sum.tuk, append = TRUE, file = "BMFindInVector_res.txt")
 
 Data_BMFindInVectorFaster <- Data %>% filter(benchmark == "BM_FindInVectorFaster/456/4096/3254/min_time:0.500/repeats:1000")
 Data_BMFindInVectorFaster <- Data_BMFindInVectorFaster %>% filter(library != "no-vec")
@@ -91,10 +99,14 @@ barchart <- ggplot(data=Data_BMFindInVectorFaster, aes(x = library,
 
 ggsave("BMFindInVectorFaster_box.png", plot=barchart, width=14, height=5, dpi=300)
 
-leveneTest(execution_time ~ library, data = Data_BMReverseVector)
-res.aov <- aov(execution_time ~ library, data = Data_BMReverseVector)
-summary(res.aov)
-TukeyHSD(res.aov)
+res.lev <- leveneTest(execution_time ~ library, data = Data_BMFindInVectorFaster)
+res.aov <- aov(execution_time ~ library, data = Data_BMFindInVectorFaster)
+sum.lev <- summary(res.lev)
+capture.output(sum.lev, append = TRUE, file = "BMFindInVectorFaster_res.txt")
+sum.aov <- summary(res.aov)
+capture.output(sum.aov, append = TRUE, file = "BMFindInVectorFaster_res.txt")
+sum.tuk <- TukeyHSD(res.aov)
+capture.output(sum.tuk, append = TRUE, file = "BMFindInVectorFaster_res.txt")
 
 Data_BMSumVector <- Data %>% filter(benchmark == "BM_SumVector/0/4096/min_time:0.500/repeats:1000")
 Data_BMSumVector <- Data_BMSumVector %>% filter(library != "no-vec")
@@ -119,10 +131,14 @@ barchart <- ggplot(data=Data_BMSumVector, aes(x = library,
 
 ggsave("BMSumVector_box.png", plot=barchart, width=14, height=5, dpi=300)
 
-leveneTest(execution_time ~ library, data = Data_BMReverseVector)
-res.aov <- aov(execution_time ~ library, data = Data_BMReverseVector)
-summary(res.aov)
-TukeyHSD(res.aov)
+res.lev <- leveneTest(execution_time ~ library, data = Data_BMSumVector)
+res.aov <- aov(execution_time ~ library, data = Data_BMSumVector)
+sum.lev <- summary(res.lev)
+capture.output(sum.lev, append = TRUE, file = "BMSumVector_res.txt")
+sum.aov <- summary(res.aov)
+capture.output(sum.aov, append = TRUE, file = "BMSumVector_res.txt")
+sum.tuk <- TukeyHSD(res.aov)
+capture.output(sum.tuk, append = TRUE, file = "BMSumVector_res.txt")
 
 Data_BMReverseVector <- Data %>% filter(benchmark == "BM_ReverseVector/0/4096/min_time:0.500/repeats:1000")
 Data_BMReverseVector <- Data_BMReverseVector %>% filter(library != "no-vec")
@@ -147,7 +163,11 @@ barchart <- ggplot(data=Data_BMReverseVector, aes(x = library,
 
 ggsave("BMReverseVector_box.png", plot=barchart, width=14, height=5, dpi=300)
 
-leveneTest(execution_time ~ library, data = Data_BMReverseVector)
+res.lev <- leveneTest(execution_time ~ library, data = Data_BMReverseVector)
 res.aov <- aov(execution_time ~ library, data = Data_BMReverseVector)
-summary(res.aov)
-TukeyHSD(res.aov)
+sum.lev <- summary(res.lev)
+capture.output(sum.lev, append = TRUE, file = "BMReverseVector_res.txt")
+sum.aov <- summary(res.aov)
+capture.output(sum.aov, append = TRUE, file = "BMReverseVector_res.txt")
+sum.tuk <- TukeyHSD(res.aov)
+capture.output(sum.tuk, append = TRUE, file = "BMReverseVector_res.txt")

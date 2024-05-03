@@ -1,0 +1,49 @@
+       Df          F value          Pr(>F) 
+ Min.   :   7   Min.   :70.03   Min.   :0  
+ 1st Qu.:2003   1st Qu.:70.03   1st Qu.:0  
+ Median :4000   Median :70.03   Median :0  
+ Mean   :4000   Mean   :70.03   Mean   :0  
+ 3rd Qu.:5996   3rd Qu.:70.03   3rd Qu.:0  
+ Max.   :7992   Max.   :70.03   Max.   :0  
+                NA's   :1       NA's   :1  
+              Df Sum Sq Mean Sq F value Pr(>F)    
+library        7  11647    1664 3395677 <2e-16 ***
+Residuals   7992      4       0                   
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+  Tukey multiple comparisons of means
+    95% family-wise confidence level
+
+Fit: aov(formula = execution_time ~ library, data = Data_BMAddVectors)
+
+$library
+                                                  diff           lwr           upr     p adj
+eve-auto-vec                              -3.001798850 -3.0048000244 -2.9987976764 0.0000000
+highway-auto-vec                          -2.606719873 -2.6097210471 -2.6037186991 0.0000000
+inline-asm-auto-vec                       -0.838930882 -0.8419320555 -0.8359297075 0.0000000
+intrinsics-auto-vec                       -2.607935282 -2.6109364558 -2.6049341078 0.0000000
+openmp-directives-auto-vec                -2.669171229 -2.6721724031 -2.6661700551 0.0000000
+std::experimental::simd-auto-vec          -0.002534217 -0.0055353913  0.0004669567 0.1709291
+xsimd-auto-vec                            -2.665437317 -2.6684384908 -2.6624361428 0.0000000
+highway-eve                                0.395078977  0.3920778033  0.3980801513 0.0000000
+inline-asm-eve                             2.162867969  2.1598667949  2.1658691429 0.0000000
+intrinsics-eve                             0.393863569  0.3908623945  0.3968647426 0.0000000
+openmp-directives-eve                      0.332627621  0.3296264473  0.3356287953 0.0000000
+std::experimental::simd-eve                2.999264633  2.9962634591  3.0022658071 0.0000000
+xsimd-eve                                  0.336361534  0.3333603596  0.3393627076 0.0000000
+inline-asm-highway                         1.767788992  1.7647878176  1.7707901656 0.0000000
+intrinsics-highway                        -0.001215409 -0.0042165827  0.0017857653 0.9238582
+openmp-directives-highway                 -0.062451356 -0.0654525300 -0.0594501820 0.0000000
+std::experimental::simd-highway            2.604185656  2.6011844818  2.6071868298 0.0000000
+xsimd-highway                             -0.058717444 -0.0617186177 -0.0557162697 0.0000000
+intrinsics-inline-asm                     -1.769004400 -1.7720055743 -1.7660032263 0.0000000
+openmp-directives-inline-asm              -1.830240348 -1.8332415216 -1.8272391736 0.0000000
+std::experimental::simd-inline-asm         0.836396664  0.8333954902  0.8393978382 0.0000000
+xsimd-inline-asm                          -1.826506435 -1.8295076093 -1.8235052613 0.0000000
+openmp-directives-intrinsics              -0.061235947 -0.0642371213 -0.0582347733 0.0000000
+std::experimental::simd-intrinsics         2.605401065  2.6023998905  2.6084022386 0.0000000
+xsimd-intrinsics                          -0.057502035 -0.0605032090 -0.0545008610 0.0000000
+std::experimental::simd-openmp-directives  2.666637012  2.6636358378  2.6696381858 0.0000000
+xsimd-openmp-directives                    0.003733912  0.0007327383  0.0067350863 0.0040603
+xsimd-std::experimental::simd             -2.662903100 -2.6659042735 -2.6599019255 0.0000000
+
