@@ -18,7 +18,7 @@ Therefore, to simplify for the purpose of this paper, vectorization is enabling 
 
 The recent realization that Moore’s law no longer holds due to extreme heat build-up at higher CPU clock speeds has driven the shift toward multicore architectures (Etiemble, 2018). Furthermore, “the DRAM structures and interfaces have evolved to avoid a ‘memory wall’. However, even with a reduced memory CPI component, pipeline stalls due to memory waits still exist when executing a single program” (Etiemble, 2018). Indicating that even with the SIMD register’s ability to effectively process N statements simultaneously, N values still need to be loaded into the SIMD register. Thus the ‘memory wall’ as described by Etiemble et al. quickly becomes the new bottleneck instead of the clock speed. Regardless, SIMD technology can still increase our programs' performance although the expected N times increase is usually not visible due to the abovementioned limitations.
 
-The present study will compare and contrast the performance of different SIMD programming paradigms that C++ developers have available to them when manipulating vectors. Furthermore, this paper will explore the impact each paradigm has on portability, maintainability, and the development process whilst also discussing ongoing advancements in each. This topic is relevant since a notable amount of research and development has gone into SIMD registers and CPUs in recent years. However, the research addressing the application of these recent CPU developments is lacking. Whilst the former is important, the latter also needs widespread adoption to increase the general performance of programs as a whole.
+The present study will compare and contrast the execution time of different SIMD programming paradigms that C++ developers have available to them when manipulating vectors. Furthermore, this paper will explore the impact each paradigm has on portability, maintainability, and the development process whilst also discussing ongoing advancements in each. This topic is relevant since a notable amount of research and development has gone into SIMD registers and CPUs in recent years. However, the research addressing the application of these recent CPU developments is lacking. Whilst the former is important, the latter also needs widespread adoption to increase the general performance of programs as a whole.
 
 ## Literature Review
 
@@ -26,7 +26,7 @@ This literature review aims to explore all SIMD programming paradigms available 
 
 Through my exhaustive search on article databases such as Google Scholar and Jstor, a thorough examination of the existing literature was conducted. Despite SIMD being a well-researched area, it was observed that the literature regarding how to implement SIMD as a developer effectively was sparse. The paper “An Evaluation of Current SIMD Programming Models for C++” from the Technical University of Berlin (Pohl et al., 2016) stands out since it was the only paper found in this search that bears a resemblance to the aim and scope of this study. 
 
-Pohl et al. (2016), similarly to this study, evaluates current SIMD programming paradigms, benchmarking each paradigm and weighing the benefits and disbenefits of each. While this paper provides foundational knowledge into the different SIMD programming paradigms available to C++ developers, there are distinct differences to the aim of this study. First and foremost, “An Evaluation of Current SIMD Programming Models for C++” primarily compares and contrasts well-established high-level libraries that facilitate SIMD programming using benchmarks and performance measurements. Contrarily, the present paper aims to evaluate high-level libraries as a whole, as a SIMD programming paradigm, and compare and contrast this paradigm against others (OpenMP Pragma directives, Auto-vectorization, and SIMD intrinsics). Furthermore, Pohl et al. (2016) evaluates each programming paradigm using graphics based benchmarks such as HEVC decoding. This process relies heavily on matrix multiplication. Conversely, the present paper aims to use simple vector based benchmarks to evaluate the performance in hopes of finding a more generalizable result.
+Pohl et al. (2016), similarly to this study, evaluates current SIMD programming paradigms, benchmarking each paradigm and weighing the benefits and disbenefits of each. While this paper provides foundational knowledge into the different SIMD programming paradigms available to C++ developers, there are distinct differences to the aim of this study. First and foremost, “An Evaluation of Current SIMD Programming Models for C++” primarily compares and contrasts well-established high-level libraries that facilitate SIMD programming by measuring execution time on various benchmarks. Contrarily, the present paper aims to evaluate high-level libraries as a whole, as a SIMD programming paradigm, and compare and contrast this paradigm against others (OpenMP Pragma directives, Auto-vectorization, and SIMD intrinsics). Furthermore, Pohl et al. (2016) evaluates each programming paradigm using graphics based benchmarks such as HEVC decoding. This process relies heavily on matrix multiplication. Conversely, the present paper aims to use simple vector based benchmarks to evaluate the performance in hopes of finding a more generalizable result.
 
 ### Auto-vectorization
 
@@ -74,10 +74,18 @@ As announced by the C++ International Organization for Standardization (ISO) in 
 
 ### Measuring performance
 
-std::chrono
-google benchmark
-problems (watch that one youtube vid)
-Make sure to cite plenty of sources!!
+To be able to measure the performance of a program you first have to define a metric. Carrington et al. (2005) concludes that using a simple and single metric to represent a high performance compute (HPC) workload is 'inadequate', and that the use of an aggregation of various simple metrics will also peform poorly. Nonetheless, the 'simple' metric floating point operations per seconds (flops) is often used. Numrich et al. (2004) proposes a new metric which is based on 'computational action'. "We examine work as it evolves in time and compute computational action as the integral of the work function over time. We compare the action generated at less than full power with the action that could have been generated at full power. We claim that the goal of performance optimization is to minimize lost, or wasted, action". Drawing inspiration from Pohl et al. (2016), the present paper aims to evaluate the different SIMD programming paradigms using execution time, not taking into consideration the efficiency of the program, effectively circumnavigating the unstandardized nature of 'perfomance'.
+
+Sources of error  
+- Random vs systemic error  
+- Random error is unavoidable so we need to use statistics!!  
+- Why is it unavoidable?  
+  - Hardware jitter:  
+    - Intstruction pipelines: The pipeline fill level has an effect on the execution time for one instruction. Difference in CPU/memory bus clock cycles: The CPU clock cycle is different from the memory bus clock speed. Your CPU sometimes has to wait for the synchronization of memory accessess. CPU frequecy scaling and power management: These features cause heterogeneities in processing power. Shared hardware caches: Caches shared between multiple cores/ threads are subject to variance due to concurrent use. Larger memory segments may have variance in access times due to physical distance from CPU.  
+  - Additionally, OS activities can cause non-determinism. Some hardware interrupts require OS handling immediately after delivery. Migration of non-pinned processes can affect the performance of CPU hueristics.  
+SOURCE: https://www.chronox.de/jent/CPU-Jitter-NPTRNG.pdf   
+OBSERVER EFFECT ALERT!! any time we observe something we are also changing the result... Because we are adding stuff to measure which adds overhead... This is not a problem though for us as we are keeping the instrumentation the same across all tests and we aren't worried about actual execution_time. just how they relate to each other. What libs are there? And which wil we be using? std::chrono && google benchmark.
+Hot vs cold performance, caching, branch preditiction. too many things can happen...
 
 ## Methods
 
@@ -91,12 +99,47 @@ Make sure to cite plenty of sources!!
 #### Hardware used
 #### Swappiness && CPUPower
 #### Bash script
+### Measurements
+#### What exactly is google benchmark measuring?? Talk about the iterations etc.
+#### Hot vs cold, how we deal with that
+#### Uncertainty, what is it? (+- 0.005 nano seconds)
 #### Expected output && transformation scripts run
 
 ## Results
   - the assumption of normality is violated
   - assumption of homogenious variance is also violated
   - Therefore, kruskal.test 
+
+  ![](BMAddVectors_bar.png)
+  ![](BMAddVectors_hist.png)
+  ![](BMFindInVector_box.png)
+  ![](BMFindInVector_hist.png)
+  ![](BMFindInVectorFaster_box.png)
+  ![](BMFindInVectorFaster_hist.png)
+  ![](BMReverseVector_box.png)
+  ![](BMReverseVector_hist.png)
+  ![](BMSumVector_box.png)
+  ![](BMSumVector_hist.png)
+
+Kruskal-Wallis rank sum test  
+data:  execution_time by library : BMAddVectors  
+Kruskal-Wallis chi-squared = 7585.3, df = 7, p-value < 2.2e-16
+
+Kruskal-Wallis rank sum test  
+data:  execution_time by library : BMFindInVector  
+Kruskal-Wallis chi-squared = 7479.6, df = 7, p-value < 2.2e-16
+
+Kruskal-Wallis rank sum test  
+data:  execution_time by library : BMFindInVectorFaster  
+Kruskal-Wallis chi-squared = 7747.4, df = 7, p-value < 2.2e-16
+
+Kruskal-Wallis rank sum test  
+data:  execution_time by library : BMReverseVector  
+Kruskal-Wallis chi-squared = 7682.1, df = 7, p-value < 2.2e-16
+
+Kruskal-Wallis rank sum test  
+data:  execution_time by library : BMSumVector  
+Kruskal-Wallis chi-squared = 7217.6, df = 7, p-value < 2.2e-16
 
 ## Bibliography
 
