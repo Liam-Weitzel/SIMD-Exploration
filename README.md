@@ -79,6 +79,25 @@ google benchmark
 problems (watch that one youtube vid)
 Make sure to cite plenty of sources!!
 
+## Methods
+
+### Setup
+#### Installing libs -> why these libs?
+### Creating the benchmarks
+#### Algo's picked & why (brief)
+#### Writing the benchmarks, maybe just go over the logic of how each algo is implemented
+#### Compiling them
+### Running benchmarks
+#### Hardware used
+#### Swappiness && CPUPower
+#### Bash script
+#### Expected output && transformation scripts run
+
+## Results
+  - the assumption of normality is violated
+  - assumption of homogenious variance is also violated
+  - Therefore, kruskal.test 
+
 ## Bibliography
 
 Breshears, C. (2020). How to Use the OpenMP Single Instruction Multiple Data (SIMD) Directive to Tell the Compiler What Code to Vectorize. [Online]. Intel.com. Available at: https://www.intel.com/content/www/us/en/developer/articles/technical/delve-into-mysteries-openmp-vec [Accessed 2 February 2024].
