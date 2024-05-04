@@ -80,6 +80,7 @@ As announced by the C++ International Organization for Standardization (ISO) in 
 
 To be able to measure the performance of a program you first have to define a metric. Carrington et al. (2005) concludes that using a simple and single metric to represent a high performance compute (HPC) workload is 'inadequate', and that the use of an aggregation of various simple metrics will also peform poorly. Nonetheless, the 'simple' metric floating point operations per seconds (flops) is often used. Numrich et al. (2004) proposes a new metric which is based on 'computational action'. "We examine work as it evolves in time and compute computational action as the integral of the work function over time. We compare the action generated at less than full power with the action that could have been generated at full power. We claim that the goal of performance optimization is to minimize lost, or wasted, action". Drawing inspiration from Pohl et al. (2016), the present paper aims to evaluate the different SIMD programming paradigms using execution time, not taking into consideration the efficiency of the program, effectively circumnavigating the unstandardized nature of 'perfomance'.
 
+//TODO:  
 Sources of error  
 - Random vs systemic error  
 - Random error is unavoidable so we need to use statistics!!  
@@ -216,7 +217,7 @@ $sudo rm /tmp/swapfile
 
 ### Creating the benchmarks
 
-To benchmark the execution time of the different programming paradigms, each paradigm will be used to implement an algorithm to solve 4 different vector manipulation problems. Each problem has multiple possible solutions. The first problem is to add each element from two vectors storing 4 doubles that share the same index. Returning a vector storing 4 doubles where each element is the sum of both input vectors at that elements index. The second problem is to find the index of the first occurence of a target value in an array. This problem results in two different benchmarks as there are two SIMD algorithms commonly used to solve this problem. The third problem is to calculate the total sum of an array storing integers. Lastly, the fourth problem is to reverse the order of each element in an array.
+To benchmark the execution time of the different programming paradigms, each paradigm will be used to implement an algorithm to solve 4 different vector manipulation problems. Each problem has multiple possible solutions. The first problem (BMAddVectors) is to add each element from two vectors storing 4 doubles that share the same index. Returning a vector storing 4 doubles where each element is the sum of both input vectors at that elements index. The second problem (BMFindInVector & BMFindInVectorFaster) is to find the index of the first occurence of a target value in an array. This problem results in two different benchmarks as there are two SIMD algorithms commonly used to solve this problem. The third problem (BMSumVector) is to calculate the total sum of an array storing integers. Lastly, the fourth problem (BMReverseVector) is to reverse the order of each element in an array.
 
 Accounting for the second problem resulting in two unique benchmarks, a total of 5 benchmarks will be used to compare the execution time of each programming paradigm.
 
