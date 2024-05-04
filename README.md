@@ -200,7 +200,7 @@ $cmake ..
 $make -j && make test
 ```
 
-Unfortunately, due to the extreme size of Highway, the host system was unable to build using `$make -j`. The build process would consistenly drain the available memory to <1 mb even when specifying to only use one core with `$make -j1`. The only option was to use my solid state drive as extra ram using swapfiles:   
+Unfortunately, due to the large size of Highway, the host system was unable to build using `$make -j`. The build process would consistenly drain the available memory to <1 mb even when specifying to only use one core with `$make -j1`. The only option was to use my solid state drive as extra ram using swapfiles:   
 
 ```
 $sudo fallocate -l 4G /tmp/swapfile  # Creates a 4 GB swap file
@@ -215,9 +215,29 @@ $sudo rm /tmp/swapfile
 ```
 
 ### Creating the benchmarks
-Algo's picked & why (brief)
-Writing the benchmarks, maybe just go over the logic of how each algo is implemented
-Compiling them, how each statement differs and why
+
+To benchmark the execution time of the different programming paradigms, each paradigm will be used to implement an algorithm to solve 4 different vector manipulation problems. Each problem obviously has multiple possible solutions. The first problem is to add each element from two vectors storing 4 doubles that share the same index. Returning a vector storing 4 doubles where each element is the sum of both input vectors at that elements index. The second problem is to find the index of the first occurence of a target value in an array. This problem results in two different benchmarks as there are two SIMD algorithms commonly used to solve this problem. The third problem is to calculate the total sum of an array storing integers. Lastly, the fourth problem is to reverse the order of each element in an array.
+
+Accounting for the second problem resulting in two unique benchmarks, a total of 5 benchmarks will be used to compare the execution time of each programming paradigm.
+
+Taking the first problem as an example, the scalar solution is implemented as such:
+```
+for(int i = 0; i < 4; ++i) {
+  result[i] = data_a[i] + data_b[i];
+}
+```
+The algorithms solving this problem are implemented using all selected implementaions of the programming paradigms (Highway, EVE, Xsimd, etc). The solutions written using auto-vectorization, no vectorization, and OpenMP directives are extremely similar but compile to completely different assembly. When writing this algorithm using intrinsics however, the logic has to change significantly. This is due to the `__m256d` registers ability to store precisely 4 doubles (256 bits). Using the intrinsic function `_mm256_loadu_pd` we can load 4 doubles into our register. After loading all our data into the registers we can use `_mm256_add_pd` to add all 8 doubles together simultaneously in the same clock cycle. The complete intrinsics code:
+```
+__m256d a = _mm256_loadu_pd(&data_a[0]);
+__m256d b = _mm256_loadu_pd(&data_b[0]);
+__m256d r = _mm256_add_pd(a, b);
+_mm256_storeu_pd(&result[0], r);
+```
+This same logic is also applied if you analyse the assembly of the auto-vetorized solution even though it was written with scalar logic. Consider an alternative algorithm where two vectors storing 3 doubles have to be added together. As the programmer, one can reason that padding both vectors with an extra 0 at the end won't change the outcome significantly and can adjust for this. However, compilers cannot. It becomes apparent that it is impossible to follow the same logic scalar solutions implement using vectorized solutions. Regardless, each solution to each problem in each paradigm was implemented making sure the output and logic was followed as closely as possible.
+
+Refer to the project files to see the exact implementation of each solution.
+
+It is also important to note that each library and programming paradigm requires different compilation flags. As an example, when compiling the un-vectorized solution, passing flags which explicitly instruct GCC to auto-vectorize the code will result in a failed experiment. The exact command used to compile each solution is in a comment at the top of each implementation.
 
 ### Running the benchmarks
 Bash script
