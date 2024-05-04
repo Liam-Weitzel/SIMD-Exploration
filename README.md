@@ -4,6 +4,7 @@ author:
   - Liam Weitzel
 ---
 \vfill
+<https://github.com/Liam-Weitzel/SIMD-Exploration>   
 Liverpool Hope University   
 School of Mathematics, Computer Science & Engineering   
 04/24/2024   
@@ -103,7 +104,9 @@ Highway is an open source SIMD library actively being developed by Google. It ha
 
 std::experimental::simd is an early beta version of the SIMD library mentioned in the literature review coming to the standard libary (SIMDISO/IEC 19570) planned for C++ 26. This early beta was released for testing in 2018 and is actively being revised by the open source community.
 
-Lastly, each benchmark will also be run using scalar/ un-vectorized code compiled using GCC as a baseline.
+Each benchmark is also implemented in assembly using the asm() function in C++. Using the hand writteng assembly implementation, the GCC compiled assembly of other SIMD programming paradigms can be compared and contrasted. Analyzing the low-level implementation will hopefully explain why one programming paradigm is faster than another.
+
+Lastly, each benchmark will also implemented using scalar/ un-vectorized code compiled using GCC, to serve as a baseline for our comparisons.
 
 ### Measurements
 
@@ -174,7 +177,41 @@ The structure of the `json` output data can be seen in the example below:
 In the example above, a total of `1986354156` executions were run in `0.5` seconds to ensure that the final measured execution time was measured 'hot'.
 
 ### Setup
-What did I do to set it all up?
+
+The host system on which all measurements are taken has a 4 core Intel(R) Core(TM) i5-5350U CPU with a clock speed of 1.80GHz, 8GB of ram with a swappiness value of 60. It is likely, but completely untested, that any x86 cpu that understands the AVX2 instruction set will be able to execute and compile all benchmarks. Nonetheless, for purposes of reproducability, the binary for each benchmark is included in the project files, with which you can verify whether the assembly is equivalent.
+
+The following list will outline the dependencies to run the benchmarks.  
+1. The Linux operating system due to the utilization of bash scripts and linux specific command line interface (cli) tools.  
+2. Git, and GCC v13: `$sudo apt-get install git gcc-13 -y`.  
+3. The cli tools xset and cpupower which can be installed on any os that uses the apt package manager using `$sudo apt-get install cpupower xset -y`.  
+4. The build tools Make, and CMake: `$sudo apt-get install make cmake -y`.  
+5. Googletest: `$sudo apt-get install libgtest-dev -y`  
+5. Highway:1.1.0 <https://github.com/google/highway>  
+6. EVE:Perdita Quiescent <https://github.com/jfalcou/eve>  
+7. Xsimd:13.0.0 <https://github.com/xtensor-stack/xsimd>  
+8. std::experimental::simd:1.0.0 <https://github.com/VcDevel/std-simd>  
+9. benchmark:1.8.3 <https://github.com/google/benchmark>  
+
+As with any library in C++, it needs to be built from source, using:  
+```
+$git clone github_repository_link.git
+$cd github_repository_name && mkdir -p build && cd build
+$cmake ..
+$make -j && make test
+```
+
+Unfortunately, due to the extreme size or Highway, the host system was unable to run build using `$make -j`. The build process would consistenly drain the available memory to <1 mb even when specifying to only use one core with `$make -j1`. The only option was to use my solid state drive as extra ram using swapfiles:   
+```
+$sudo fallocate -l 4G /tmp/swapfile  # Creates a 4 GB swap file
+$sudo chmod 600 /tmp/swapfile       # Sets correct permissions
+$sudo mkswap /tmp/swapfile          # Sets up the file as swap space
+$sudo swapon /tmp/swapfile          # Enables the swap file
+
+$make -j1
+
+$sudo swapoff /tmp/swapfile
+$sudo rm /tmp/swapfile
+```
 
 ### Creating the benchmarks
 Algo's picked & why (brief)
@@ -182,8 +219,6 @@ Writing the benchmarks, maybe just go over the logic of how each algo is impleme
 Compiling them, how each statement differs and why
 
 ### Running the benchmarks
-Hardware used
-Swappiness && CPUPower
 Bash script
 
 ## Results
