@@ -93,11 +93,11 @@ Find more sources for all these
 
 ## Methods
 
-To evaluate which SIMD programming paradigm is the 'fastest', eight implementations of these paradigms were selected. The GNU Compiler Collection GCC (GCC) was selected as the compiler for all benchmarks due to its popularity. Consequently, the implementation details of auto-vectorization and OpenMP directives are also handled by GCC. The specific libraries chosen to represent the 'high-level libraries' paradigm are: XSimd, EVE, Highway, and std::experimental::simd. 
+To evaluate which SIMD programming paradigm is the 'fastest', eight implementations of these paradigms were selected. The GNU Compiler Collection (GCC) was selected as the compiler for all benchmarks due to its popularity. Consequently, the implementation details of auto-vectorization and OpenMP directives are also handled by GCC. The specific libraries chosen to represent the 'high-level libraries' paradigm are: XSimd, EVE, Highway, and std::experimental::simd. 
 
-XSimd is being used by major open-source projects, such as Mozilla Firefox, Apache Arrow, Pythran, and Krita. Is actively being developed and has 68 core contributors.
+XSimd is being used by major open-source projects, such as Mozilla Firefox, Apache Arrow, Pythran, and Krita. XSimd is actively being developed and has 68 core contributors at the time of writing.
 
-EVE is a re-implementation of the old SIMD library by Falcou et al. (2019) which for a while was named Boost.SIMD. Boost.SIMD before being made propietary in 2019 due to disagreements in the community, was the most popular high-level SIMD library. Many of the core contributors that worked on Boost.SIMD have switched over to EVE. Unlike XSimd, EVE has a tight group of 16 contributors.
+EVE is a re-implementation of the old SIMD library by Falcou et al. (2019) named Boost.SIMD. Boost.SIMD before being made propietary in 2019 due to disagreements in the community, was a very popular high-level SIMD library. Many of the core contributors that worked on Boost.SIMD have switched over to EVE. Unlike XSimd, EVE has a tight group of 16 contributors.
 
 Highway is an open source SIMD library actively being developed by Google. It has 3 to 4 commits per day and an impressive test suite, works on the widest range of targets out of all libraries mentioned.
 
@@ -106,11 +106,72 @@ std::experimental::simd is an early beta version of the SIMD library mentioned i
 Lastly, each benchmark will also be run using scalar/ un-vectorized code compiled using GCC as a baseline.
 
 ### Measurements
-How are we going to measure the speeeed of these variables?
-What exactly is google benchmark measuring?? Talk about the iterations etc.
-Hot vs cold, how we deal with that
-Uncertainty, what is it? (+- 0.005 nano seconds)
-Expected output && transformation scripts run
+
+Google's benchmark library is used to measure and create each benchmark. This library abstracts complex low-level benchmark design to give a more userfriendly benchmarking experience. Google benchmark returns the execution time of a specified benchmark in nano seconds with 4 decimal places. Thus the uncertainty of our measurements are +- 0.5 femtoseconds or +- 0.00005 nanoseconds. Google benchmark's parameter `->MinTime(0.5)` is used to ensure that the execution time recorded is the execution time of the function running 'hot'. After the function being measured has ran continously for atleast 0.5 seconds, and the variance of the execution time between the last 10 executions is lower than a specified threshold, Google benchmark will return the last execution time. It is important to note that it does not return an aggregate of the execution time. Given this, the measurement process is repeated 1000 times using the argument `->Repetitions(1000)` for each benchmark.
+
+Using the evirontment variables of the host system, we can control the output medium and format of google benchmark. Before any benchmarks, these environment variables were defined to set the output format to `json` using: `export BENCHMARK_OUT_FORMAT=json`. The output medium (file or commandline) can be specified by setting the `BENCHMARK_OUT` environment variable to the file name.
+
+The structure of the `json` output data can be seen in the example below:
+```
+{
+  "context": {
+    "date": "2024-05-02T09:30:37+01:00",
+    "host_name": "Liam-W-MacBookAir",
+    "executable": "./auto-vec",
+    "num_cpus": 4,
+    "mhz_per_cpu": 1800,
+    "cpu_scaling_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 32768,
+        "num_sharing": 2
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 32768,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 262144,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 3145728,
+        "num_sharing": 4
+      }
+    ],
+    "load_avg": [1.05273,1.02295,1.00195],
+    "library_version": "v1.8.3-73-gbc946b91",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "BM_AddVectors/1/2/3/4/min_time:0.500/repeats:1",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_AddVectors/1/2/3/4/min_time:0.500/repeats:1",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 1986354156,
+      "real_time": 3.5172534056940363e-01,
+      "cpu_time": 3.5169191047318954e-01,
+      "time_unit": "ns"
+    }
+  ]
+}
+```
+
+In the example above, a total of `1986354156` executions were run in `0.5` seconds to ensure that the final measured execution time was measured 'hot'.
 
 ### Setup
 What did I do to set it all up?
