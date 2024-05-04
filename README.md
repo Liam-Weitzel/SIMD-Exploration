@@ -216,7 +216,7 @@ $sudo rm /tmp/swapfile
 
 ### Creating the benchmarks
 
-To benchmark the execution time of the different programming paradigms, each paradigm will be used to implement an algorithm to solve 4 different vector manipulation problems. Each problem obviously has multiple possible solutions. The first problem is to add each element from two vectors storing 4 doubles that share the same index. Returning a vector storing 4 doubles where each element is the sum of both input vectors at that elements index. The second problem is to find the index of the first occurence of a target value in an array. This problem results in two different benchmarks as there are two SIMD algorithms commonly used to solve this problem. The third problem is to calculate the total sum of an array storing integers. Lastly, the fourth problem is to reverse the order of each element in an array.
+To benchmark the execution time of the different programming paradigms, each paradigm will be used to implement an algorithm to solve 4 different vector manipulation problems. Each problem has multiple possible solutions. The first problem is to add each element from two vectors storing 4 doubles that share the same index. Returning a vector storing 4 doubles where each element is the sum of both input vectors at that elements index. The second problem is to find the index of the first occurence of a target value in an array. This problem results in two different benchmarks as there are two SIMD algorithms commonly used to solve this problem. The third problem is to calculate the total sum of an array storing integers. Lastly, the fourth problem is to reverse the order of each element in an array.
 
 Accounting for the second problem resulting in two unique benchmarks, a total of 5 benchmarks will be used to compare the execution time of each programming paradigm.
 
@@ -226,7 +226,7 @@ for(int i = 0; i < 4; ++i) {
   result[i] = data_a[i] + data_b[i];
 }
 ```
-The algorithms solving this problem are implemented using all selected implementaions of the programming paradigms (Highway, EVE, Xsimd, etc). The solutions written using auto-vectorization, no vectorization, and OpenMP directives are extremely similar but compile to completely different assembly. When writing this algorithm using intrinsics however, the logic has to change significantly. This is due to the `__m256d` registers ability to store precisely 4 doubles (256 bits). Using the intrinsic function `_mm256_loadu_pd` we can load 4 doubles into our register. After loading all our data into the registers we can use `_mm256_add_pd` to add all 8 doubles together simultaneously in the same clock cycle. The complete intrinsics code:
+The algorithms solving this problem are implemented using all selected implementaions of the programming paradigms (Highway, EVE, Xsimd, etc). The solutions written using auto-vectorization, no vectorization, and OpenMP directives use the same logic but compile to completely different assembly. When writing this algorithm using intrinsics, assembly, or any high-level library however, the logic has to change significantly. This is because auto vectorized code, unvectorized code, and code written using OpenMP directives all use scalar logic. Contrarily, intrinsics, assembly, and SIMD libraries give you direct access to the SIMD registers in the CPU meaning they cannot follow the same logic. As an example take the `__m256d` SIMD registers ability to store precisely 4 doubles (256 bits). Using the intrinsic function `_mm256_loadu_pd` we can load 4 doubles into our register. After loading all our data into the registers we can use `_mm256_add_pd` to add all 8 doubles together simultaneously in the same clock cycle. The complete intrinsics code:
 ```
 __m256d a = _mm256_loadu_pd(&data_a[0]);
 __m256d b = _mm256_loadu_pd(&data_b[0]);
@@ -240,7 +240,40 @@ Refer to the project files to see the exact implementation of each solution.
 It is also important to note that each library and programming paradigm requires different compilation flags. As an example, when compiling the un-vectorized solution, passing flags which explicitly instruct GCC to auto-vectorize the code will result in a failed experiment. The exact command used to compile each solution is in a comment at the top of each implementation.
 
 ### Running the benchmarks
-Bash script
+
+To run the experiment reproducibly, a bash script was written. The bash script first sets the cpu frequency to a 'performance' mode to reduce variation, ensures the cpu does not go to sleep during the experiment, and sets the aforementioned environment variables for Google benchmark. Then consecutively executing each benchmarks binary.
+```
+#!/bin/bash
+sudo cpupower frequency-set --governor performance
+xset s 0 0 -dpms
+export BENCHMARK_OUT_FORMAT=json
+export BENCHMARK_OUT=inline-asm-data
+./inline-asm
+export BENCHMARK_OUT=intrinsics-data
+./intrinsics
+export BENCHMARK_OUT=highway-data
+./highway
+export BENCHMARK_OUT=eve-data
+./eve
+export BENCHMARK_OUT=std::experimental::simd-data
+./std::experimental::simd
+export BENCHMARK_OUT=xsimd-data
+./xsimd
+export BENCHMARK_OUT=openmp-directives-data
+./openmp-directives
+export BENCHMARK_OUT=auto-vec-data
+./auto-vec
+export BENCHMARK_OUT=no-vec-data
+./no-vec
+sudo cpupower frequency-set --governor powersave
+xset s 60 60 +dpms
+```
+
+Finally, to run the experiment use the commands:
+```
+$sudo chmod 777 benchmark.sh
+$sudo ./benchmark.sh
+```
 
 ## Results
   - the assumption of normality is violated
