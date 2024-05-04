@@ -2,11 +2,14 @@
 title: "Which SIMD programming paradigm in C++ is the fastest benchmarked on various vector manipulation algorithms?"
 author:
   - Liam Weitzel
-  - 20211316
-  - 04/24/2024
 ---
-
+\vfill
+Liverpool Hope University   
+School of Mathematics, Computer Science & Engineering   
+04/24/2024   
 \newpage
+
+## Abstract
 
 ## Introduction
 
@@ -83,27 +86,44 @@ Sources of error
   - Hardware jitter:  
     - Intstruction pipelines: The pipeline fill level has an effect on the execution time for one instruction. Difference in CPU/memory bus clock cycles: The CPU clock cycle is different from the memory bus clock speed. Your CPU sometimes has to wait for the synchronization of memory accessess. CPU frequecy scaling and power management: These features cause heterogeneities in processing power. Shared hardware caches: Caches shared between multiple cores/ threads are subject to variance due to concurrent use. Larger memory segments may have variance in access times due to physical distance from CPU.  
   - Additionally, OS activities can cause non-determinism. Some hardware interrupts require OS handling immediately after delivery. Migration of non-pinned processes can affect the performance of CPU hueristics.  
-SOURCE: https://www.chronox.de/jent/CPU-Jitter-NPTRNG.pdf   
-OBSERVER EFFECT ALERT!! any time we observe something we are also changing the result... Because we are adding stuff to measure which adds overhead... This is not a problem though for us as we are keeping the instrumentation the same across all tests and we aren't worried about actual execution_time. just how they relate to each other. What libs are there? And which wil we be using? std::chrono && google benchmark.
+SOURCE: https://www.chronox.de/jent/CPU-Jitter-NPTRNG.pdf (Müller, 2022)   
+OBSERVER EFFECT ALERT!! any time we observe something we are also changing the result... Because we are adding stuff to measure which adds overhead... This is not a problem though for us as we are keeping the instrumentation the same across all tests and we aren't worried about actual execution_time. just how they relate to each other. What libs are there?
 Hot vs cold performance, caching, branch preditiction. too many things can happen...
+Find more sources for all these
 
 ## Methods
 
-### Setup
-#### Installing libs -> why these libs?
-### Creating the benchmarks
-#### Algo's picked & why (brief)
-#### Writing the benchmarks, maybe just go over the logic of how each algo is implemented
-#### Compiling them
-### Running benchmarks
-#### Hardware used
-#### Swappiness && CPUPower
-#### Bash script
+To evaluate which SIMD programming paradigm is the 'fastest', eight implementations of these paradigms were selected. The GNU Compiler Collection GCC (GCC) was selected as the compiler for all benchmarks due to its popularity. Consequently, the implementation details of auto-vectorization and OpenMP directives are also handled by GCC. The specific libraries chosen to represent the 'high-level libraries' paradigm are: XSimd, EVE, Highway, and std::experimental::simd. 
+
+XSimd is being used by major open-source projects, such as Mozilla Firefox, Apache Arrow, Pythran, and Krita. Is actively being developed and has 68 core contributors.
+
+EVE is a re-implementation of the old SIMD library by Falcou et al. (2019) which for a while was named Boost.SIMD. Boost.SIMD before being made propietary in 2019 due to disagreements in the community, was the most popular high-level SIMD library. Many of the core contributors that worked on Boost.SIMD have switched over to EVE. Unlike XSimd, EVE has a tight group of 16 contributors.
+
+Highway is an open source SIMD library actively being developed by Google. It has 3 to 4 commits per day and an impressive test suite, works on the widest range of targets out of all libraries mentioned.
+
+std::experimental::simd is an early beta version of the SIMD library mentioned in the literature review coming to the standard libary (SIMDISO/IEC 19570) planned for C++ 26. This early beta was released for testing in 2018 and is actively being revised by the open source community.
+
+Lastly, each benchmark will also be run using scalar/ un-vectorized code compiled using GCC as a baseline.
+
 ### Measurements
-#### What exactly is google benchmark measuring?? Talk about the iterations etc.
-#### Hot vs cold, how we deal with that
-#### Uncertainty, what is it? (+- 0.005 nano seconds)
-#### Expected output && transformation scripts run
+How are we going to measure the speeeed of these variables?
+What exactly is google benchmark measuring?? Talk about the iterations etc.
+Hot vs cold, how we deal with that
+Uncertainty, what is it? (+- 0.005 nano seconds)
+Expected output && transformation scripts run
+
+### Setup
+What did I do to set it all up?
+
+### Creating the benchmarks
+Algo's picked & why (brief)
+Writing the benchmarks, maybe just go over the logic of how each algo is implemented
+Compiling them, how each statement differs and why
+
+### Running the benchmarks
+Hardware used
+Swappiness && CPUPower
+Bash script
 
 ## Results
   - the assumption of normality is violated
@@ -140,6 +160,12 @@ Kruskal-Wallis chi-squared = 7682.1, df = 7, p-value < 2.2e-16
 Kruskal-Wallis rank sum test  
 data:  execution_time by library : BMSumVector  
 Kruskal-Wallis chi-squared = 7217.6, df = 7, p-value < 2.2e-16
+
+## Discussion
+
+This is where we analyze the assembly generated by each benchmark and try to understand why they performed the way they did? JUST THE HOT LOOP!! NO ONE CARES ABOUT THE FULL FUNCTION
+
+## Conclusion
 
 ## Bibliography
 
