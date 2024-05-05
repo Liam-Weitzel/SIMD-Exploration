@@ -280,51 +280,94 @@ $sudo ./benchmark.sh
 
 ### The metrics
 
-As mentioned in the methodology, the execution time of each solution was measured. To compare each solution, the median of the unvectorized solution's execution time was used as a baseline. Dividing the unvectorized solutions median by all other results of all other solutions in that benchmark results in the 'speed up' over the baseline. This metric was not used in any statistical test only for representation.
+As mentioned in the methodology, the execution time of each solution was measured. To compare each solution, the median of the unvectorized solutions execution time was used as a baseline. Dividing the unvectorized solutions median by all other results of all other solutions in that benchmark results in the 'speed up' over the baseline. This metric was not used in any statistical test only for representation.
 
-Brief analysis of the data reveals that the variance of the execution time of each solution was not normally distibuted, but instead heavily positively skewed. Furthermore, the variance was not homogenious thus a nonparametric test is required. The nonparametric Kruskal-Wallis test assumes non-normally distributed data, non-homogenious variance, two or more independent groups, similar distribution across groups, and randomly selected independent samples. These assumptions are the exact same as the popular Mann-Whitney U test, as the Kruskal-Wallis test is the same as the Mann-Whitney U test but designed for more than two independent samples. The Kruskal-Wallis test will be used to determine whether the population medians are equal (null hypothesis).
+Brief analysis of the data reveals that the variance of the execution time of each solution was not normally distibuted, but instead heavily positively skewed. Furthermore, the variance was not homogeneous thus a nonparametric test is required. The nonparametric Kruskal-Wallis test assumes non-normally distributed data, non-homogeneous variance, two or more independent groups, similar distribution across groups, and randomly selected independent samples. These assumptions are the exact same as the popular Mann-Whitney U test, as the Kruskal-Wallis test is the same as the Mann-Whitney U test but designed for more than two independent samples. Hence, the Kruskal-Wallis test was used to determine whether the population medians are equal (null hypothesis).
 
+\newpage
 ### Benchmark: Add vectors
+
+\begin{center}
+Figure 1. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'add vectors' problem.
+\end{center}
   ![](BMAddVectors_bar.png)
+
+Figure 1 indicates that the solution compiled using auto vectorization, and the solution written using the std::experimental::simd library executed 4.0x faster than the unvectorized solution. The solution written using the EVE library had the same median execution time (1.002x) as the unvectorized solution. The solutions written using: OpenMP directives, highway, intrinsics, and xsimd all exhibited between a 1.33x and a 1.39x increase in execution time over the unvectorized solution. Lastly, the solution written using inline assembly executed 3.17x faster than the unvectorized solution.
+
+\begin{center}
+Figure 2. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'add vectors' problem.
+\end{center}
   ![](BMAddVectors_hist.png)
 
-Kruskal-Wallis rank sum test  
-data:  execution_time by library : BMAddVectors  
-Kruskal-Wallis chi-squared = 7585.3, df = 7, p-value < 2.2e-16
+Figure 2 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, figure 2 indicates that the population medians are not equal (Kruskal-Wallis: p-value < 2.2e-16).
 
 ### Benchmark: Find in vector
+
+\begin{center}
+Figure 3. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'find in vector' problem using the sub-optimal algorithm.
+\end{center}
   ![](BMFindInVector_box.png)
+
+Figure 3 indicates that the solutions written using EVE, Highway, and intrinsics executed between 10.59 and 10.63x faster than the unvectorized solution. The solution written using std::experimental::simd executed 9.4x faster than the unvectorized solution. The solution written using Xsimd executed 8.44x faster than the unvectorized solution. Lastly, the solution compiled with auto-vectorization and the solutions written using inline assembly and OpenMP directives all executed between 6.59 and 9.96x faster than the unvectorized solution. Contrary to expectation, the solution written using inline assembly executed the slowest in this comparison. This is likely due to human error.
+
+\begin{center}
+Figure 4. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'find in vector' problem using the sub-optimal algorithm.
+\end{center}
   ![](BMFindInVector_hist.png)
 
-Kruskal-Wallis rank sum test  
-data:  execution_time by library : BMFindInVector  
-Kruskal-Wallis chi-squared = 7479.6, df = 7, p-value < 2.2e-16
+Figure 4 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, figure 2 indicates that the population medians are not equal (Kruskal-Wallis: p-value < 2.2e-16).
 
 ### Benchmark: Find in vector faster
+
+\begin{center}
+Figure 5. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'find in vector' problem using the optimal algorithm.
+\end{center}
   ![](BMFindInVectorFaster_box.png)
+
+Contrary to figure 3, figure 5 depicts rather expected results. The optimal algorithm which can only be implemented using SIMD logic directly was used in this benchmark, explaining the sudden observed disparity between the paradigms which use scalar and simd logic. The solutions written using EVE, Highway, and inline assembly executed between 15.54x and 16.32x faster than the unvectorized solution. Interestingly, the solution written using intrinsics executed 13.9x faster than the unvectorized solution. Both the solutions written using std::experimental::simd and xsimd libraries executed 11.10-11.19x faster than the unvectorized solution. Lastly, both the auto vectorized and OpenMp directives solutions executed 6.94-9.96x faster than the unvectorized solution.
+
+\begin{center}
+Figure 6. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'find in vector' problem using the optimal algorithm.
+\end{center}
   ![](BMFindInVectorFaster_hist.png)
 
-Kruskal-Wallis rank sum test  
-data:  execution_time by library : BMFindInVectorFaster  
-Kruskal-Wallis chi-squared = 7747.4, df = 7, p-value < 2.2e-16
-
-### Benchmark: Sum vector
-  ![](BMReverseVector_box.png)
-  ![](BMReverseVector_hist.png)
-
-Kruskal-Wallis rank sum test  
-data:  execution_time by library : BMSumVector  
-Kruskal-Wallis chi-squared = 7217.6, df = 7, p-value < 2.2e-16
+Figure 6 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, figure 2 indicates that the population medians are not equal (Kruskal-Wallis: p-value < 2.2e-16).
 
 ### Benchmark: Reverse vector
+
+\begin{center}
+Figure 7. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'reverse vector' problem.
+\end{center}
+  ![](BMReverseVector_box.png)
+
+Similarly to the last benchmark, Figure 7 reveals that the problem of reversing a vector can benefit from programming using SIMD logic directly. This was not observed with all the SIMD libraries as std::experimental::simd interestingly executed 0.375x faster than the unvectorized code. The solutions compiled using auto-vectorization and OpenMP directives executed between 7.145x and 7.112x faster than the unvectorized solution. The solutions written using EVE, and Highway executed between 8.167x and 8.175x faster than the unvectorized solution. The solutions written using intrinsics and Xsimd executed between 7.98 and 7.53x faster than the unvectorized solution. Lastly, the solution written using inline assembly executed 6.192x faster than the unvectorized solution.
+
+\begin{center}
+Figure 8. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'reverse vector' problem.
+\end{center}
+  ![](BMReverseVector_hist.png)
+
+std::experimental::simd is excluded from figure 8 to prevent warping the scale as the median execution time (4110 nanoseconds) was lower than the unvectorized solutions median execution time (1540 nanoseconds). Figure 8 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, figure 2 indicates that the population medians are not equal (Kruskal-Wallis: p-value < 2.2e-16).
+
+### Benchmark: Sum vector
+
+\begin{center}
+Figure 9. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'sum vector' problem.
+\end{center}
   ![](BMSumVector_box.png)
+
+Contrary to the last benchmark, the solution implemented using std::experimental::simd boasts an execution time 16.59x faster than the unvectorized solution. The solutions implemented using EVE, Highway, Intrinsics, and Xsimd executed between 12.28x and 12.38x faster than the unvectorized solution. The solutions compiled using auto-vectorization, and OpenMP directives executed between 8.4x and 8.548x faster than the unvectorized solution. Lastly and suprisingly, the solution written using inline assembly executed 6.72x faster than the unvectorized solution, again likely due to human error.
+
+\begin{center}
+Figure 10. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'sum vector' problem.
+\end{center}
   ![](BMSumVector_hist.png)
 
-std::experimental::simd excluded from histogram because the actual peformance was lower than the baseline (unvectorized).
+Figure 10 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, figure 2 indicates that the population medians are not equal (Kruskal-Wallis: p-value < 2.2e-16).
 
-Kruskal-Wallis rank sum test  
-data:  execution_time by library : BMReverseVector  
-Kruskal-Wallis chi-squared = 7682.1, df = 7, p-value < 2.2e-16
+//TODO: Find out how verbose I should be when describing the figures. Using words like 'speed up' altough un-academic would shorten these paragraphs and make them a lot more legible. Now on second thought, using words like speed up, increase over baseline, AND 'faster than the unvectorized solution' will be very confusing for the reader. Keep it consistent. It reaaaally doesn't flow, looks like its copy pasted from some script... How to fix?
+
+//TODO: Mention that the raw data and analysis R script are both in the project files ;)
 
 ## Discussion
 
