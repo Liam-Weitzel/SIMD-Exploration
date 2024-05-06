@@ -395,61 +395,61 @@ Instead the optimal unvectorized solution uses the assembly instruction `movsd` 
 
 From this we can logically deduce that a theoretical execution time using SIMD instructions should be 4x faster than the unvectorized solution. This is precisely what was observed in figure 1 where both the auto-vectorized solution as well as the solution written using std::experimental::simd executed 4x faster than the unvectorized solution.
 
-Analyzing the assembly of each compiled solution reveals that all vectorized solutions are making use of the `vaddpd` assembly instruction and use the optimal approach. Infact, the solutions written using: highway, std::experimental::simd, xsimd, and intrinsics had nearly identical assembly:
+Analyzing the assembly of each compiled solution reveals that all vectorized solutions are making use of the `vaddpd` assembly instruction and use the optimal approach. Infact, the solutions written using: highway, std::experimental::simd, xsimd, and intrinsics compiled to practically identical assembly:
 
 ```assembly
 Highway:
-    mov    rax,rbx
-    nop    DWORD PTR [rax+0x0]
+    mov     rax,rbx
+    nop     DWORD PTR [rax+0x0]
     vmovupd ymm4,YMMWORD PTR [rsp+0x30]
-    vaddpd ymm0,ymm4,YMMWORD PTR [rsp+0x10]
+    vaddpd  ymm0,ymm4,YMMWORD PTR [rsp+0x10]
     vmovupd YMMWORD PTR [rsp+0x50],ymm0
-    dec    rax
+    dec     rax
 
 std::experimental::simd:
-    mov    rax,rbx
-    nop    DWORD PTR [rax+0x0]
+    mov     rax,rbx
+    nop     DWORD PTR [rax+0x0]
     vmovapd xmm2,XMMWORD PTR [rsp+0x20]
-    vaddpd xmm0,xmm2,XMMWORD PTR [rsp]
+    vaddpd  xmm0,xmm2,XMMWORD PTR [rsp]
     vmovapd XMMWORD PTR [rsp+0x40],xmm0
-    dec    rax
+    dec     rax
 
 Xsimd:
-    mov    rax,rbx
-    nop    DWORD PTR [rax+0x0]
+    mov     rax,rbx
+    nop     DWORD PTR [rax+0x0]
     vmovupd ymm2,YMMWORD PTR [rsp+0x10]
-    vaddpd ymm0,ymm2,ymm2
+    vaddpd  ymm0,ymm2,ymm2
     vmovupd YMMWORD PTR [rsp+0x30],ymm0
-    dec    rax
+    dec     rax
 
 intrinsics:
-    mov    rax,rbx
-    nop    DWORD PTR [rax+0x0]
+    mov     rax,rbx
+    nop     DWORD PTR [rax+0x0]
     vmovupd ymm4,YMMWORD PTR [rsp+0x30]
-    vaddpd ymm0,ymm4,YMMWORD PTR [rsp+0x10]
+    vaddpd  ymm0,ymm4,YMMWORD PTR [rsp+0x10]
     vmovupd YMMWORD PTR [rsp+0x50],ymm0
-    dec    rax
+    dec     rax
 ```
 
 It is important to note that these libraries had largely varying execution times as seen in figure 1 and 2. Suprisingly, the auto-vectorized solution used more assembly instructions, thus likely more clock cycles, but boasts the fastest median execution time.
 
 ```assembly
 Auto-vec:
-    vxorps xmm1,xmm1,xmm1
-    mov    rdx,QWORD PTR [rsp+0x18]
-    mov    rax,rbx
-    vcvtsi2sd xmm2,xmm1,r15
-    vcvtsi2sd xmm0,xmm1,rdx
-    vmovsd xmm3,xmm2,xmm2
-    vcvtsi2sd xmm2,xmm1,r14
-    vcvtsi2sd xmm1,xmm1,r13
-    vunpcklpd xmm0,xmm0,xmm3
-    vunpcklpd xmm1,xmm2,xmm1
+    vxorps      xmm1,xmm1,xmm1
+    mov         rdx,QWORD PTR [rsp+0x18]
+    mov         rax,rbx
+    vcvtsi2sd   xmm2,xmm1,r15
+    vcvtsi2sd   xmm0,xmm1,rdx
+    vmovsd      xmm3,xmm2,xmm2
+    vcvtsi2sd   xmm2,xmm1,r14
+    vcvtsi2sd   xmm1,xmm1,r13
+    vunpcklpd   xmm0,xmm0,xmm3
+    vunpcklpd   xmm1,xmm2,xmm1
     vinsertf128 ymm0,ymm0,xmm1,0x1
-    vaddpd ymm0,ymm0,ymm0
-    nop    DWORD PTR [rax+0x0]
-    vmovapd YMMWORD PTR [rsp+0x20],ymm0
-    dec    rax
+    vaddpd      ymm0,ymm0,ymm0
+    nop         DWORD PTR [rax+0x0]
+    vmovapd     YMMWORD PTR [rsp+0x20],ymm0
+    dec         rax
 ```
 
 This indicates that the implementation of the algorithm is not the only factor affecting the execution time. It is likely that due to the simplicity of this problem, the execution time was largely influenced by the overhead of loading the library used to implement the solution. The solutions compiled using auto-vectorization and written using std::experimental::simd executed the fastest, further supporting this theory. Auto-vectorization has no overhead due to it being a compilation process. Simlarly, std::experimental::simd is a small library comparitavely to the other libraries tested and is part of the standard libray. However, the median execution time of the solution compiled using OpenMP directives does not align with this theory.
@@ -477,39 +477,71 @@ The optimal solution using scalar logic is to do an iterative search through the
   }
 ```
 
-The sub-optimal approach using SIMD logic utilizes the SIMD concept of masking. The first step is to store 8 copies of the target value in a 256 bit register. Next we will iterate `4096` times but with an increment of 8. Every iteration we will load 8 integers into a 256 bit register. Using the assembly instruction `vpcmpeqd` we are able to compare the integers in the target vector against the newly loaded vector containing the 8 current values. `vpcmpeqd` returns a mask where any equal values are set to 1 and unequal values are set to 0. Using the assembly instruction `vmovmskps` which takes a large 32 bit mask and returns 1 if any value in the mask is 1, we can deduce if the target is within the current block of 8 integers. Lastly, using the assembly instructin `tzcnt` to get the index of the first 1 within the mask by counting the trailing zeros.
+The sub-optimal approach using SIMD logic utilizes the SIMD concept of masking. The first step is to store 8 copies of the target value in a 256 bit register. Next we will iterate `4096` times but with an increment of 8. Every iteration we will load 8 integers into a 256 bit register. Using the assembly instruction `vpcmpeqd` we are able to compare the integers in the target vector against the newly loaded vector containing the 8 current values. `vpcmpeqd` returns a mask where any equal values are set to 1 and unequal values are set to 0. Using the assembly instruction `vmovmskps` which takes a large 32 bit mask and reduces it to an 8 bit mask, essentially returning 1 if any value in the mask is 1. From this, we can deduce if the target is within the current block of 8 integers. Lastly, using the assembly instructin `tzcnt` to get the index of the first 1 within the mask by counting the trailing zeros.
 
 The proposed solution in assembly using SIMD instructions alongside comments for clarity:
 ```Assembly
-  movd %[target], %%xmm0             // Move target into xmm0 register
-  vpermilps $0, %%xmm0, %%xmm0       // Duplicate the target integer across xmm0 register
+  movd [target], xmm0            // Move target into xmm0 register
+  vpermilps $0, xmm0, xmm0       // Duplicate the target integer across xmm0 register
 
   // Initialize loop variables
-  xor %%eax, %%eax                   // Clear eax register for loop index
+  xor eax, eax                   // Clear eax register for loop index
 
-  .p2align 4                         // Align loop entry point to 16 bytes
+  .p2align 4                     // Align loop entry point to 16 bytes
   1:
-  vmovdqu (%[vec], %%rax, 4), %%ymm1 // Load 8 integers from vector
-  vpcmpeqd %%ymm0, %%ymm1, %%ymm2    // Compare 8 integers with target
-  vmovmskps %%ymm2, %%edx            // Move comparison mask to edx register
+  vmovdqu ([vec], rax, 4), ymm1  // Load 8 integers from vector
+  vpcmpeqd ymm0, ymm1, ymm2      // Compare 8 integers with target
+  vmovmskps ymm2, edx            // Move comparison mask to edx register
 
-  test %%edx, %%edx                  // Test if any bits are set
-  jz 2f                              // Jump to next iteration if none are set
+  test edx, edx                  // Test if any bits are set
+  jz 2f                          // Jump to next iteration if none are set
 
-  tzcnt %%edx, %%edx                 // Count trailing zeros in mask
-  add %%eax, %%edx                   // Add base index to the bit position
-  mov %%edx, %[res]                  // Move result to output variable
-  jmp 3f                             // Jump to end
+  tzcnt edx, edx                 // Count trailing zeros in mask
+  add eax, edx                   // Add base index to the bit position
+  mov edx, [res]                 // Move result to output variable
+  jmp 3f                         // Jump to end
 
   2:
-  add $8, %%eax                      // Increment loop index
-  cmp %[N], %%eax                    // Compare with N
-  jl 1b                              // Jump back if not reached end
+  add $8, eax                    // Increment loop index
+  cmp [N], eax                   // Compare with N
+  jl 1b                          // Jump back if not reached end
 ```
 
-This approach was used to implement all SIMD solutions for this benchmark. Analyzing the assembly of each compiled solution reveals that all vectorized solutions are able to correctly make use of the `vpcmpeqd` assembly instruction and were able to somewhat recreate this approach. Contrary to 'add vectors' benchmark, the overall structure of the 'hot loop' of each solution is significantly different. Notably, the solutions compiled using auto-vectorization, written using OpenMP directives and Xsimd were not able to make use of the `vmovmskps` and `tzcnt` assembly instructions but instead used `vptest` and a scalar algorithm to accomplish the same outcome. As depicted in figure 3, the solutions compiled using auto-vectorization, written using OpenMP directives and Xsimd also executed among the slowest.
+This approach was used to implement all SIMD solutions for this benchmark. Analyzing the assembly of each compiled solution reveals that all vectorized solutions are able to correctly make use of the `vpcmpeqd` assembly instruction and were able to somewhat recreate this approach. Contrary to 'add vectors' benchmark, the overall structure of the 'hot loop' of each solution is significantly different. Notably, the solutions compiled using auto-vectorization, written using OpenMP directives and Xsimd were not able to make use of the `vmovmskps` and `tzcnt` assembly instructions but instead used `vptest` followed by an iterative search to accomplish the same outcome. As depicted in figure 3, the solutions compiled using auto-vectorization, written using OpenMP directives and Xsimd also executed among the slowest.
 
 ### Benchmark: Find in vector faster
+
+The 'find in vector faster' benchmark requires each programming paradigm implementation (library) to solve the same problem as the previous benchmark 'find in vector' but using the optimal approach. The primary difference is using `vptest` instead of `vmovmskps`. Much like the scalar assembly instruction `test`, `vptest` tests if all elements in the 256 bit register are 0 by performing a bitwise AND. This by itself does not decrease the execution time, but both `vptest` and `vmovmskps` are bottlenecks in the hot loop. Due to the subtle change in the test logic we are now able to group neighbouring iterations of the loop together using bitwise OR and test them simultaneously using `vptest`. In theory, this greatly relieves pressure from the bottleneck. Instead of checking if 8 integers are equal to the target per iteration in the previous sub-optimal approach, the optimal approach is checking 32 integers per iteration.
+```C++
+void BM_FindInVectorFaster() {
+  int target = 456;
+  int N = 4096;
+  int vector[N];
+  std::fill(vector, vector + N, 0);
+  vector[3254] = target;
+  int res = -1;
+
+  __m256i x = _mm256_set1_epi32(target); //Loading target and duplicating across register
+  for (int i = 0; i < N; i += 32) {
+    __m256i y1 = _mm256_load_si256((__m256i*) &vector[i]); //Load the first 8 ints
+    __m256i m1 = _mm256_cmpeq_epi32(x, y1); //Comparing the first 8 ints against target
+    __m256i y2 = _mm256_load_si256((__m256i*) &vector[i + 8]); //Loading the next 8 ints
+    __m256i m2 = _mm256_cmpeq_epi32(x, y2); //Comparing the next 8 ints against target
+    __m256i y3 = _mm256_load_si256((__m256i*) &vector[i + 16]); //Loading the next 8 ints
+    __m256i m3 = _mm256_cmpeq_epi32(x, y3); //Comparing the next 8 ints against target
+    __m256i y4 = _mm256_load_si256((__m256i*) &vector[i + 24]); //Loading the next 8 ints
+    __m256i m4 = _mm256_cmpeq_epi32(x, y4); //Comparing the next 8 ints against target
+    __m256i m12 = _mm256_or_si256(m1, m2); //Combining resulting masks using bitwise or
+    __m256i m34 = _mm256_or_si256(m3, m4); //Combining resulting masks using bitwise or
+    __m256i m = _mm256_or_si256(m12, m34); //Combining resulting masks using bitwise or
+    if(!_mm256_testz_si256(m, m)) { //Testing if the final combined mask contains a 1
+      //Find the target within this 32 int block using previous approach
+    }
+  }
+}
+```
+
+This approach was used to implement all SIMD solutions for this benchmark. Analyzing the assembly of each compiled solution reveals that all vectorized solutions are able to correctly make use of the `vptest` assembly instruction, but only the programming paradigms allowing the use of SIMD logic directly were able to use the bitwise OR grouping method. Figure 5 verifies this visually. The two solutions compiled using auto-vectorization and OpenMP directives, which use scalar logic, executed the slowest.
 
 ### Benchmark: Reverse vector
 
