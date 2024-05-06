@@ -43,7 +43,7 @@ From reviewing the aforementioned sources, it is clear that automatic vectorizat
 2. The program itself calculates the constraints of the memory access ratio, and secondly, the program is divided into vectorizable parts and non-vectorizable parts. Constrained by Amdahl's law, The acceleration ratio is also limited by the proportion of vectorizable code in the application. When there are too many non-vectorizable parts of the program, the acceleration effect is still poor.   
 3. Due to the limitations of program analysis and optimization technical capabilities, it is not all vectorizable parts of the program are discovered.  
 
-By analyzing the implementation of auto-vectorization in GCC and LLVM, it is obvious that the SIMD compilation process is roughly divided into three parts. Namely, building the dependency graph, reasoning what optimizations can be made, and code generation. Building the dependency graph contains processes such as: converting code to compilers intermediate representation (SSA), In-lining, and clustering. Following this, the compiler can reason with the information gathered from the previous steps and perform loop-level optimization, block-level optimization, and function-level optimization. Due to the complexity of this topic, the given explanation presents a deliberate simplification to build a foundational model of auto-vectorization and its core principles. A more detailed overview will be presented in the discussion.
+By analyzing the implementation of auto-vectorization in GCC and LLVM, it is obvious that the SIMD compilation process is roughly divided into three parts. Namely, building the dependency graph, reasoning what optimizations can be made, and code generation. Building the dependency graph contains processes such as: converting code to compilers intermediate representation (SSA), In-lining, and clustering. Following this, the compiler can reason with the information gathered from the previous steps and perform loop-level optimization, block-level optimization, and function-level optimization. Due to the complexity of this topic, the given explanation presents a deliberate simplification to build a foundational model of auto-vectorization and its core principles.
 
 ### OpenMP directives flags
 
@@ -377,7 +377,7 @@ To be able to form an accurate conclusion, the reason behind the observed change
 
 ### Benchmark: Add vectors
 
-The first problem 'add vectors' simply requires each programming paradigm implementation (library) to add each index of the two arrays:
+The first problem 'add vectors' requires each programming paradigm implementation (library) to add each index of the two arrays:
 ```c++
 double data_a[4] = {1.0,2.0,3.0,4.0};
 double data_b[4] = {1.0,2.0,3.0,4.0};
@@ -387,13 +387,13 @@ Then to store the result in `double result[4]` to give:
 double result[4] = {2.0,4.0,6.0,8.0};
 ```
 
-The optimal solution using scalar logic is to iterate from 0 to 4, and set `result[i] = data_a[i] + data_b[i]`. When using vectorized logic the optimal solution changes since we are able to process a Single Instruction across Multiple pieces of Data (S.I.M.D) in one clock cycle. Using the AVX2 instruction set, we can load all four doubles into a 256 bit register using the intrinsic `__m256d a = _mm256_loadu_pd(&data_a[0])`. Doing this for both `data_a` and `data_b` allows us to use the intrinsic `_m256d r = _mm256_add_pd(a, b)` to add each value in each register together to solve the problem. Finally, `_mm256_storeu_pd(&result[0], r)` stores the result into our `result` array. 
+The optimal solution using scalar logic is to iterate from 0 to 4, and set `result[i] = data_a[i] + data_b[i]`. When using vectorized logic the optimal solution changes since we are able to process a Single Instruction across Multiple pieces of Data (S.I.M.D) in one clock cycle. Using the AVX2 instruction set, we can load all four doubles into a 256 bit register using the intrinsic function `__m256d a = _mm256_loadu_pd(&data_a[0])`. Doing this for both `data_a` and `data_b` allows us to use the intrinsic function `_m256d r = _mm256_add_pd(a, b)` to add each value in each register together to solve the problem. Finally, `_mm256_storeu_pd(&result[0], r)` stores the result into our `result` array. 
 
-Translating the intrinsics into assembly we can see that not every intrinsic function maps to one assembly instruction. For example, loading and storing each value into a 256 bit register takes four `vmovsd` assembly instructions. The only intrinsic function which maps to a single assembly instruction in the aforementioned solution is `_mm256_add_pd` mapping directly to `vaddpd`.
+Translating the intrinsic functions into assembly we can see that not every intrinsic function maps to one assembly instruction. For example, loading and storing each value into a 256 bit register takes four `vmovsd` assembly instructions. The only intrinsic function which maps to a single assembly instruction in the aforementioned solution is `_mm256_add_pd` mapping directly to `vaddpd`.
 
 Instead the optimal unvectorized solution uses the assembly instruction `movsd` twice to load one value from both the input arrays into a 64 bit register. Then using `addsd` both registers can be summed and stored into the result using another `movsd` instruction. Repeating this process four times gives us the desired result.
 
-Regardless, from this we can conclude that the minimum theoretical execution time using SIMD assembly perfectly should be 4x faster than the unvectorized solution. This is what was observed in figure 1 where both the auto-vectorized solution as well as the solution written using std::experimental::simd executed 4x faster than the unvectorized solution.
+From this we can logically deduce that a theoretical execution time using SIMD instructions should be 4x faster than the unvectorized solution. This is precisely what was observed in figure 1 where both the auto-vectorized solution as well as the solution written using std::experimental::simd executed 4x faster than the unvectorized solution.
 
 Analyzing the assembly of each compiled solution reveals that all vectorized solutions are making use of the `vaddpd` assembly instruction and use the optimal approach. Infact, the solutions written using: highway, std::experimental::simd, xsimd, and intrinsics had nearly identical assembly:
 
@@ -455,6 +455,59 @@ Auto-vec:
 This indicates that the implementation of the algorithm is not the only factor affecting the execution time. It is likely that due to the simplicity of this problem, the execution time was largely influenced by the overhead of loading the library used to implement the solution. The solutions compiled using auto-vectorization and written using std::experimental::simd executed the fastest, further supporting this theory. Auto-vectorization has no overhead due to it being a compilation process. Simlarly, std::experimental::simd is a small library comparitavely to the other libraries tested and is part of the standard libray. However, the median execution time of the solution compiled using OpenMP directives does not align with this theory.
 
 ### Benchmark: Find in vector
+
+The second problem 'find in vector' requires each implementation of each programming paradigm (library) to find a value `target = 456` in an array of size `4096` and store it in the variable `res`. The target value is always located on the 3254th index of the array.
+
+```C++
+  int target = 456;
+  int N = 4096;
+  int vector[N];
+  std::fill(vector, vector + N, 0);
+  vector[3254] = target;
+  int res = -1;
+```
+
+The optimal solution using scalar logic is to do an iterative search through the array:
+```C++
+  for (int i = 0; i < N; ++i) {
+    if(vector[i] == target) {
+      res = i;
+      break;
+    }
+  }
+```
+
+The sub-optimal approach using SIMD logic utilizes the SIMD concept of masking. The first step is to store 8 copies of the target value in a 256 bit register. Next we will iterate `4096` times but with an increment of 8. Every iteration we will load 8 integers into a 256 bit register. Using the assembly instruction `vpcmpeqd` we are able to compare the integers in the target vector against the newly loaded vector containing the 8 current values. `vpcmpeqd` returns a mask where any equal values are set to 1 and unequal values are set to 0. Using the assembly instruction `vmovmskps` which takes a large 32 bit mask and returns 1 if any value in the mask is 1, we can deduce if the target is within the current block of 8 integers. Lastly, using the assembly instructin `tzcnt` to get the index of the first 1 within the mask by counting the trailing zeros.
+
+The proposed solution in assembly using SIMD instructions alongside comments for clarity:
+```Assembly
+  movd %[target], %%xmm0             // Move target into xmm0 register
+  vpermilps $0, %%xmm0, %%xmm0       // Duplicate the target integer across xmm0 register
+
+  // Initialize loop variables
+  xor %%eax, %%eax                   // Clear eax register for loop index
+
+  .p2align 4                         // Align loop entry point to 16 bytes
+  1:
+  vmovdqu (%[vec], %%rax, 4), %%ymm1 // Load 8 integers from vector
+  vpcmpeqd %%ymm0, %%ymm1, %%ymm2    // Compare 8 integers with target
+  vmovmskps %%ymm2, %%edx            // Move comparison mask to edx register
+
+  test %%edx, %%edx                  // Test if any bits are set
+  jz 2f                              // Jump to next iteration if none are set
+
+  tzcnt %%edx, %%edx                 // Count trailing zeros in mask
+  add %%eax, %%edx                   // Add base index to the bit position
+  mov %%edx, %[res]                  // Move result to output variable
+  jmp 3f                             // Jump to end
+
+  2:
+  add $8, %%eax                      // Increment loop index
+  cmp %[N], %%eax                    // Compare with N
+  jl 1b                              // Jump back if not reached end
+```
+
+This approach was used to implement all SIMD solutions for this benchmark. Analyzing the assembly of each compiled solution reveals that all vectorized solutions are able to correctly make use of the `vpcmpeqd` assembly instruction and were able to somewhat recreate this approach. Contrary to 'add vectors' benchmark, the overall structure of the 'hot loop' of each solution is significantly different. Notably, the solutions compiled using auto-vectorization, written using OpenMP directives and Xsimd were not able to make use of the `vmovmskps` and `tzcnt` assembly instructions but instead used `vptest` and a scalar algorithm to accomplish the same outcome. As depicted in figure 3, the solutions compiled using auto-vectorization, written using OpenMP directives and Xsimd also executed among the slowest.
 
 ### Benchmark: Find in vector faster
 
