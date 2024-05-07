@@ -512,6 +512,7 @@ This approach was used to implement all SIMD solutions for this benchmark. Analy
 ### Benchmark: Find in vector faster
 
 The 'find in vector faster' benchmark requires each programming paradigm implementation (library) to solve the same problem as the previous benchmark 'find in vector' but using the optimal approach. The primary difference is using `vptest` instead of `vmovmskps`. Much like the scalar assembly instruction `test`, `vptest` tests if all elements in the 256 bit register are 0 by performing a bitwise AND. This by itself does not decrease the execution time, but both `vptest` and `vmovmskps` are bottlenecks in the hot loop. Due to the subtle change in the test logic we are now able to group neighbouring iterations of the loop together using bitwise OR and test them simultaneously using `vptest`. In theory, this greatly relieves pressure from the bottleneck. Instead of checking if 8 integers are equal to the target per iteration in the previous sub-optimal approach, the optimal approach is checking 32 integers per iteration.
+
 ```C++
 void BM_FindInVectorFaster() {
   int target = 456;
@@ -525,15 +526,20 @@ void BM_FindInVectorFaster() {
   for (int i = 0; i < N; i += 32) {
     __m256i y1 = _mm256_load_si256((__m256i*) &vector[i]); //Load the first 8 ints
     __m256i m1 = _mm256_cmpeq_epi32(x, y1); //Comparing the first 8 ints against target
+
     __m256i y2 = _mm256_load_si256((__m256i*) &vector[i + 8]); //Loading the next 8 ints
     __m256i m2 = _mm256_cmpeq_epi32(x, y2); //Comparing the next 8 ints against target
+
     __m256i y3 = _mm256_load_si256((__m256i*) &vector[i + 16]); //Loading the next 8 ints
     __m256i m3 = _mm256_cmpeq_epi32(x, y3); //Comparing the next 8 ints against target
+
     __m256i y4 = _mm256_load_si256((__m256i*) &vector[i + 24]); //Loading the next 8 ints
     __m256i m4 = _mm256_cmpeq_epi32(x, y4); //Comparing the next 8 ints against target
+
     __m256i m12 = _mm256_or_si256(m1, m2); //Combining resulting masks using bitwise or
     __m256i m34 = _mm256_or_si256(m3, m4); //Combining resulting masks using bitwise or
     __m256i m = _mm256_or_si256(m12, m34); //Combining resulting masks using bitwise or
+
     if(!_mm256_testz_si256(m, m)) { //Testing if the final combined mask contains a 1
       //Find the target within this 32 int block using previous approach
     }
@@ -541,13 +547,105 @@ void BM_FindInVectorFaster() {
 }
 ```
 
-This approach was used to implement all SIMD solutions for this benchmark. Analyzing the assembly of each compiled solution reveals that all vectorized solutions are able to correctly make use of the `vptest` assembly instruction, but only the programming paradigms allowing the use of SIMD logic directly were able to use the bitwise OR grouping method. Figure 5 verifies this visually. The two solutions compiled using auto-vectorization and OpenMP directives, which use scalar logic, executed the slowest.
+This approach was used to implement all SIMD solutions for this benchmark. Analyzing the assembly of each compiled solution reveals that all vectorized solutions are able to correctly make use of the `vptest` assembly instruction, but only the solutions written using programming paradigm implementations (libraries) allowing the use of SIMD logic directly were able to use the bitwise OR grouping method. Figure 5 verifies this visually. The two solutions compiled using auto-vectorization and OpenMP directives, which use scalar logic, executed the slowest.
 
 ### Benchmark: Reverse vector
+
+The 'reverse vector' benchmark requires each programming paradigm implementation (library) to reverse each element in an array of size `4096`. The optimal scalar approach iterates over half the elements in the array swapping the elements at index `[i]` and `[4096 - i - 1]` at every iteration.
+
+```C++
+void BM_ReverseVector() {
+  int N = 4096;
+  int vector[N];
+  std::iota (vector, vector + N, 0);
+
+  for (int i = 0; i < N / 2; ++i)
+    std::swap(vector[i], vector[N - i - 1]);
+}
+```
+
+To solve this problem using SIMD logic we require permutations. The assembly instruction `vpshufd` copies each element from a source (first operand) to a destination (second operand) in an order specified in the third operand. Using this SIMD assembly instruction we are able reverse 8 integers simultaneously by specifying the order as `{7,6,5,4,3,2,1}`. Following this we can apply the same logic as in the scalar approach.
+
+The annotated solution implemented using intrinsics for clarification:
+```C++
+void BM_ReverseVector() {
+  int N = 4096;
+  int vector[N];
+  std::iota (vector, vector + N, 0);
+
+  //Initialize the order for the reverse permutation
+  const __m256i reversePermutation = _mm256_setr_epi32(7,6,5,4,3,2,1,0);
+
+  for (int i = 0; i < N / 2; i += 8) {
+    //Load the next 8 ints from the start
+    __m256i x = _mm256_loadu_si256((__m256i*) &vector[i]);
+
+    //Load the next 8 ints from the back
+    __m256i y = _mm256_loadu_si256((__m256i*) &vector[N - i - 8]);
+
+    _mm256_permutevar8x32_epi32(x, reversePermutation); //Reverse x
+    _mm256_permutevar8x32_epi32(y, reversePermutation); //Reverse y
+
+    _mm256_storeu_si256((__m256i*) &vector[N - i - 8], x); //Store x in y's place
+    _mm256_storeu_si256((__m256i*) &vector[i], y); //Store y in x's place
+  }
+}
+```
+
+Due to the similarity between the scalar and vectorized approach it is possible to logically deduce that a theoretical execution time using SIMD instructions should be 8x faster than the unvectorized solution. This is precisely what was observed in figure 7 where the solutions implemented using EVE, Highway and intrinsics executed 8x faster than the unvectorized solution.
+
+Analyzing the assembly of each compiled solution reveals that not all vectorized solutions are making use of the `vpshufd` assembly instruction as expected. Infact, the solutions written using EVE, Highway, intrinsics, and Xsimd compiled to practically identical assembly which does not include the `vpshufd`. Nonetheless, the aforementioned solutions are all executed among the fastest in this benchmark. It is possible that because the vector is reversed place, and never explicitly stored back in memory, that the compiler optimized this away.
+//NOTE: Really have no clue what happened here.
+
+```
+EVE:
+    nop     DWORD PTR [rax+rax*1+0x0]
+    vmovdqu ymm1,YMMWORD PTR [rdx-0x20]
+    vmovdqu ymm0,YMMWORD PTR [rbx+rax*4]
+    sub     rdx,0x20
+    vmovdqu YMMWORD PTR [rbx+rax*4],ymm1
+    add     rax,0x8
+    vmovdqu YMMWORD PTR [rdx],ymm0
+    cmp     ecx,eax
+
+Highway:
+    nop     DWORD PTR [rax+rax*1+0x0]
+    vmovdqa ymm1,YMMWORD PTR [rdx-0x20]
+    vmovdqa ymm0,YMMWORD PTR [rbx+rax*4]
+    sub     rdx,0x20
+    vmovdqa YMMWORD PTR [rbx+rax*4],ymm1
+    add     rax,0x8
+    vmovdqa YMMWORD PTR [rdx],ymm0
+    cmp     ecx,eax
+
+intrinsics:
+    nop     DWORD PTR [rax+rax*1+0x0]
+    vmovdqu ymm0,YMMWORD PTR [rdx-0x20]
+    vmovdqu ymm1,YMMWORD PTR [rbx+rax*4]
+    sub     rdx,0x20
+    vmovdqu YMMWORD PTR [rdx],ymm1
+    vmovdqu YMMWORD PTR [rbx+rax*4],ymm0
+    add     rax,0x8
+    cmp     ecx,eax
+
+Xsimd:
+    nop     DWORD PTR [rax+rax*1+0x0]
+    vpermd  ymm2,ymm0,YMMWORD PTR [rdx-0x20]
+    vpermd  ymm1,ymm0,YMMWORD PTR [rbx+rax*4]
+    sub     rdx,0x20
+    vmovdqa YMMWORD PTR [rbx+rax*4],ymm2
+    add     rax,0x8
+    vmovdqa YMMWORD PTR [rdx],ymm1
+    cmp     ecx,eax
+```
+
+Similary, the excluded solution written using std::experimental::simd compiled strangely. The hot loop contains an excessive amount of instructions not required nor explicitly implemented in the C++ code. Only the solutions compiled using auto-vectorization and OpenMP directives followed the expected optimal approach. Nonetheless and similarly to the previous benchmark, the solutions written using programming paradigm implementations (libraries) allowing the use of SIMD logic directly executed the fastest.
 
 ### Benchmark: Sum vector
 
 ## Conclusion
+
+Basically, SIMD programming is an art, auto-vectorization is amazing but to unlock SIMD's full potential, and potentially blow off your entire leg, you need to use SIMD logic directly.
 
 ## Bibliography
 
