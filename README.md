@@ -236,7 +236,7 @@ _mm256_storeu_pd(&result[0], r);
 ```
 This same logic is also applied if you analyse the assembly of the auto-vetorized solution even though it was written with scalar logic. Consider an alternative algorithm where two vectors storing 3 doubles have to be added together. As the programmer, one can reason that padding both vectors with an extra 0 at the end will not change the outcome significantly and can adjust for this. However, compilers cannot. It becomes apparent that it is impossible to follow the same logic scalar solutions implement using vectorized solutions. Regardless, each solution to each problem in each paradigm was implemented making sure the output and logic was followed as closely as possible.
 
-The problems were particularly selected because the optimal solution makes use of a various specific AVX2 assembly instructions. Using this approach we are essentially testing whether each SIMD programming paradigm is effectively able to implement these specific AVX2 assembly instructions. Refer to the project files to see the exact implementation of each solution.
+The problems were particularly selected because the optimal solution makes use of a various specific AVX2 assembly instructions. Using this approach we are essentially testing whether each SIMD programming paradigm is effectively able to implement these specific AVX2 assembly instructions. The discussion includes a detailed breakdown of each problem and the algorithms implemented.
 
 It is also important to note that each library and programming paradigm requires different compilation flags. As an example, when compiling the un-vectorized solution, passing flags which explicitly instruct GCC to auto-vectorize the code will result in a failed experiment. The exact command used to compile each solution is in a comment at the top of each implementation.
 
@@ -642,6 +642,106 @@ Xsimd:
 Similary, the excluded solution written using std::experimental::simd compiled strangely. The hot loop contains an excessive amount of instructions not required nor explicitly implemented in the C++ code. Only the solutions compiled using auto-vectorization and OpenMP directives followed the expected optimal approach. Nonetheless and similarly to the previous benchmark, the solutions written using programming paradigm implementations (libraries) allowing the use of SIMD logic directly executed the fastest.
 
 ### Benchmark: Sum vector
+
+Lastly, the 'sum vector' benchmark requires each programming paradigm implementation (library) to sum each element in an array of size `4096`. The optimal scalar approach iterates over all elements in the array, adding each element `[i]` to the variable `int res` at every iteration. 
+
+```C++
+void BM_SumVector() {
+  int N = 4096;
+  int vector[N];
+  std::iota (vector, vector + N, 0);
+  int res = 0;
+
+  for( int i = 0; i < N; ++i ) {
+    res += vector[i];
+  }
+}
+```
+
+The accumulator variable `int res` has to be updated before the next iteration can begin, largely preventing vectorization by adding a dependency between iterations. To resolve this, we can logicaly split the array into eight interleaved partitions to create 8 partial sums (vertical summation), which then sum to the final sum using horizontal summation. We can arbitrarily partition the array to further to remove dependency between iterations.
+
+The annotated intrinisics code for clarity:
+```C++
+void BM_SumVector() {
+  int N = 4096;
+  int vector[N];
+  std::iota (vector, vector + N, 0);
+  int res = 0;
+
+  // Initialize two 256-bit integer vectors to zero to store partial sums.
+  __m256i s1 = _mm256_setzero_si256();
+  __m256i s2 = _mm256_setzero_si256();
+
+  // Loop through the array in steps of 16
+  // processing two blocks of 8 integers each iteration.
+  for (int i = 0; i < N; i += 16) {
+    // Add the next block of 8 integers to the first sum vector.
+    s1 = _mm256_add_epi32(s1, _mm256_load_si256((__m256i*) &vector[i]));
+    // Add the subsequent block of 8 integers to the second sum vector.
+    s2 = _mm256_add_epi32(s2, _mm256_load_si256((__m256i*) &vector[i + 8]));
+  }
+
+  // Combine the two partial sum vectors into a single vector.
+  __m256i s = _mm256_add_epi32(s1, s2);
+  // Allocate space for 8 integers to store the combined sums.
+  int t[8];
+
+  // Store the combined sums from the SIMD register to the array.
+  _mm256_storeu_si256((__m256i*) t, s);
+  
+  // Sum the elements of the temporary array to get the final result.
+  for (int i = 0; i < 8; ++i) 
+    res += t[i];
+}
+```
+
+Due to the similarity between the scalar and vectorized approach it is possible to logically deduce that a theoretical execution time using SIMD instructions should be 16x faster than the unvectorized solution. This is precisely what was observed in figure 9 where the solution implemented using std::experimental::simd executed 16.59x faster than the unvectorized solution.
+
+Analyzing the assembly of each compiled solution reveals that not all vectorized solutions are making use of the optimal approach. Again, the solutions compiled using auto-vectorization and OpenMP directives used an alternative approach with a slower median execution time. Similarly to the previous benchmark, the solutions written using EVE, Highway, intrinsics, and Xsimd compiled to practically identical assembly using the optimal approach. Suprisingly, the fastest solution implemented using std::experimental::simd foregoes two assembly instructions in its hot loop and is still able to produce a correct result.
+
+```
+EVE:
+    vpaddd  ymm3,ymm2,YMMWORD PTR [rax]
+    vpaddd  ymm0,ymm1,YMMWORD PTR [rax+0x20]
+    add     rax,0x40
+    vmovdqa ymm2,ymm3
+    vmovdqa ymm1,ymm0
+    cmp     rax,rcx
+
+Highway:
+    vpaddd  ymm3,ymm2,YMMWORD PTR [rax]
+    vpaddd  ymm0,ymm1,YMMWORD PTR [rax+0x20]
+    add     rax,0x40
+    vmovdqa ymm2,ymm3
+    vmovdqa ymm1,ymm0
+    cmp     rax,rcx
+
+Xsimd:
+    vpaddd  ymm3,ymm2,YMMWORD PTR [rax]
+    vpaddd  ymm0,ymm1,YMMWORD PTR [rax+0x20]
+    add     rax,0x40
+    vmovdqa ymm2,ymm3
+    vmovdqa ymm1,ymm0
+    cmp     rax,rcx
+
+intrinsics:
+    vpaddd  ymm3,ymm1,YMMWORD PTR [rax]
+    vpaddd  ymm0,ymm2,YMMWORD PTR [rax+0x20]
+    add     rax,0x40
+    vmovdqa ymm1,ymm3
+    vmovdqa ymm2,ymm0
+    cmp     rax,rcx
+
+std::experimental::simd:
+    vpaddd ymm1,ymm1,YMMWORD PTR [rax]
+    vpaddd ymm0,ymm0,YMMWORD PTR [rax+0x20]
+    add    rax,0x40
+    cmp    rax,rcx
+```
+
+Similarly to the two previous benchmarks, the solutions written using programming paradigm implementations (libraries) allowing the use of SIMD logic directly executed the fastest.
+
+//NOTE: A little rough around the edges... polish tomorrow.
 
 ## Conclusion
 
