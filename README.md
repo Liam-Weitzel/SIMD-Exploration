@@ -12,7 +12,7 @@ School of Mathematics, Computer Science & Engineering
 
 ## Abstract
 
-As processor designs are trending towards parallelism and multi-core architectures due to the stagnation of clock frequencies, SIMD has gained prominence for optimizing high throughput compute workloads. This paper provides a comparative analysis benchmarking the efficacy of various SIMD programming paradigms on vector manipulation tasks. The programming paradigms compared are auto-vectorization, OpenMP directives, SIMD intrinsics, inline assembly, and high-level libraries abstracting intrinsics. The specific high-level libraries compared are: Xsimd, Highway, EVE, and std::experimental::simd. Google's benchmark library is used to measure the execution time of each programming paradigm. The findings indicate that implementing a solution to a problem using a programming paradigm that uses vectorized logic as opposed to scalar logic generally significantly increases performance. Furthermore, we have found that implementing a solution using high-level SIMD libraries is often advantageous when compared to using inline assembly or intrinsics as the margin of error is significantly lower. Lastly, the findings suggest that utilizing high-level SIMD libraries to implement solutions to '`simple`' problems results in a decrease in performance when compared to the same solution implemented using scalar logic and compiled using auto-vectorization or OpenMP directives.
+As processor designs are trending towards parallelism and multi-core architectures due to the stagnation of clock frequencies, SIMD has gained prominence for optimizing high throughput compute workloads. This paper provides a comparative analysis benchmarking the efficacy of various SIMD programming paradigms on vector manipulation tasks. The programming paradigms compared are auto-vectorization, OpenMP directives, SIMD intrinsics, inline assembly, and high-level libraries abstracting intrinsics. The specific high-level libraries compared are: Xsimd, Highway, EVE, and std::experimental::simd. Google's benchmark library is used to measure the execution time of each programming paradigm. The findings indicate that implementing a solution to a problem using a programming paradigm that uses vectorized logic as opposed to scalar logic generally significantly increases performance. Furthermore, we have found that implementing a solution using high-level SIMD libraries is often advantageous when compared to using inline assembly or intrinsics as the margin of error is significantly lower. Lastly, the findings suggest that utilizing high-level SIMD libraries to implement solutions to '`simple`' problems results in a decrease in performance when compared to the same solution implemented using scalar logic and compiled using auto-vectorization.
 
 ## Introduction
 
@@ -103,7 +103,7 @@ To evaluate which SIMD programming paradigm is the 'fastest', the eight followin
 3. Highway
 4. inline assembly
 5. x86 intrinsics
-6. OpenMP directivs
+6. OpenMP directives
 7. std::experimental::simd
 8. Xsimd
 
@@ -125,7 +125,7 @@ Lastly, each benchmark will also be implemented using scalar/ un-vectorized code
 
 Google's benchmark library is used to measure and create each benchmark. This library abstracts complex low-level benchmark design to give a more userfriendly benchmarking experience. Google benchmark returns the execution time of a specified benchmark in nano seconds with 4 decimal places. Thus the uncertainty of our measurements are +- 0.5 femtoseconds or +- 0.00005 nanoseconds. Google benchmark's parameter `->MinTime(0.5)` is used to ensure that the execution time recorded is the execution time of the function running 'hot'. After the function being measured has ran continously for atleast 0.5 seconds, and the variance of the execution time between the last 10 executions is lower than a specified threshold, Google benchmark will return the last execution time. It is important to note that it does not return an aggregate of the execution time. Given this, the measurement process is repeated 1000 times using the argument `->Repetitions(1000)` for each benchmark.
 
-Using the evirontment variables of the host system, we can control the output medium and format of Google benchmark. Before any benchmarks, these environment variables are defined to set the output format to `json` using: `export BENCHMARK_OUT_FORMAT=json`. The output medium (file or commandline) can be specified by setting the `BENCHMARK_OUT` environment variable to the file name.
+Using the evirontment variables of the host system, we can control the output medium and format of Google benchmark. Before any benchmarks are executed, these environment variables are defined to set the output format to `json` using: `export BENCHMARK_OUT_FORMAT=json`. The output medium (file or commandline) can be specified by setting the `BENCHMARK_OUT` environment variable to the file name.
 
 The structure of the `json` output data can be seen in the example below:
 ```json
@@ -191,19 +191,19 @@ In the example above, a total of `1986354156` executions were run in `0.5` secon
 
 ### Setup
 
-The host system on which all measurements are taken has a 4 core Intel(R) Core(TM) i5-5350U CPU with a clock speed of 1.80GHz, 8GB of ram with a swappiness value of 60. It is likely, but completely untested, that any x86 CPU that understands the AVX2 instruction set will be able to execute and compile all benchmarks. Nonetheless, for purposes of reproducability, the binary for each benchmark is included in the project files, with which you can verify whether the assembly is equivalent.
+The host system on which all measurements are taken has a 4 core Intel(R) Core(TM) i5-5350U CPU with a clock speed of 1.80GHz, 8GB of ram with a swappiness value of 60. It is likely, but completely untested, that any x86 CPU that understands the AVX2 instruction set will be able to execute and compile all benchmarks. Nonetheless, for purposes of reproducability, the binary for each benchmark is included in the project files, with which it can be verified whether the assembly is equivalent.
 
 The following list will outline the dependencies to run the benchmarks.  
 1. The Linux operating system due to the utilization of bash scripts and linux specific command line interface (cli) tools.  
-2. The cli tools xset and cpupower which can be installed on any os that uses the apt package manager using `$sudo apt-get install cpupower xset -y`.  
+2. The cli tools xset and cpupower which can be installed on any operating system that uses the apt package manager using `$sudo apt-get install cpupower xset -y`.  
 3. Git, and GCC v13: `$sudo apt-get install git gcc-13 -y`.  
 4. The build tools Make, and CMake: `$sudo apt-get install make cmake -y`.  
 5. Googletest: `$sudo apt-get install libgtest-dev -y`  
-5. Highway:1.1.0 <https://github.com/google/highway>  
-6. EVE:Perdita Quiescent <https://github.com/jfalcou/eve>  
-7. Xsimd:13.0.0 <https://github.com/xtensor-stack/xsimd>  
-8. std::experimental::simd:1.0.0 <https://github.com/VcDevel/std-simd>  
-9. benchmark:1.8.3 <https://github.com/google/benchmark>  
+6. Highway:1.1.0 <https://github.com/google/highway>  
+7. EVE:Perdita Quiescent <https://github.com/jfalcou/eve>  
+8. Xsimd:13.0.0 <https://github.com/xtensor-stack/xsimd>  
+9. std::experimental::simd:1.0.0 <https://github.com/VcDevel/std-simd>  
+10. benchmark:1.8.3 <https://github.com/google/benchmark>  
 
 As with any library in C++, each library needs to be built from source, using:  
 ```bash
@@ -213,7 +213,7 @@ $cmake ..
 $make -j && make test
 ```
 
-Unfortunately, due to the large size of Highway, the host system was unable to build using `$make -j`. The build process would consistenly drain the available memory to <1 mb even when specifying to only use one core with `$make -j1`. The only option was to use my solid state drive as extra ram using swapfiles:   
+Unfortunately, due to the large size of Highway, the host system was unable to build using `$make -j`. The build process would consistenly drain the available memory to <1 mb even when specifying to only use one core with `$make -j1`. The only option was to use the solid state drive of the host system as extra ram using swapfiles:   
 
 ```bash
 $sudo fallocate -l 4G /tmp/swapfile  # Creates a 4 GB swap file
@@ -229,32 +229,32 @@ $sudo rm /tmp/swapfile
 
 ### Creating the benchmarks
 
-To benchmark the execution time of the different programming paradigms, each paradigm will be used to implement an algorithm to solve 4 different vector manipulation problems. Each problem has multiple possible solutions. The first problem (BMAddVectors) is to add each element from two arrays storing 4 doubles that share the same index. Returning an array storing 4 doubles where each element is the sum of both input arrays at that elements index. The second problem (BMFindInVector & BMFindInVectorFaster) is to find the index of the first occurence of a target value in an array. This problem results in two different benchmarks as there are two SIMD algorithms commonly used to solve this problem. The third problem (BMSumVector) is to calculate the total sum of an array storing integers. Lastly, the fourth problem (BMReverseVector) is to reverse the order of each element in an array.
+To benchmark the execution time of the different programming paradigms, each paradigm will be used to implement an algorithm to solve 4 different vector manipulation problems. Each problem has multiple possible solutions. The first problem (BMAddVectors) is to add each element from two arrays storing 4 doubles that share the same index, returning an array storing 4 doubles where each element is the sum of both input arrays at that elements index. The second problem (BMFindInVector & BMFindInVectorFaster) is to find the index of the first occurence of a target value in an array. This problem results in two different benchmarks as there are two SIMD algorithms commonly used to solve this problem. The third problem (BMSumVector) is to calculate the total sum of an array storing integers. Lastly, the fourth problem (BMReverseVector) is to reverse the order of each element in an array.
 
 Accounting for the second problem resulting in two unique benchmarks, a total of 5 benchmarks will be used to compare the execution time of each programming paradigm.
 
-Taking the first problem as an example, the scalar solution is implemented as such:
+Taking the first problem as an example, the scalar solution is implemented as follows:
 ```c++
 for(int i = 0; i < 4; ++i) {
   result[i] = data_a[i] + data_b[i];
 }
 ```
-The algorithms solving this problem are implemented using all selected implementations of the programming paradigms (Highway, EVE, Xsimd, etc). The solutions written using auto-vectorization, no vectorization, and OpenMP directives use the same logic but compile to completely different assembly. When writing this algorithm using intrinsics, assembly, or any high-level library however, the logic has to change significantly. This is because auto vectorized code, unvectorized code, and code written using OpenMP directives all use scalar logic. Contrarily, intrinsics, assembly, and SIMD libraries give you direct access to the SIMD assembly instructions meaning they cannot follow the same logic. As an example take the `__m256d` SIMD registers ability to store precisely 4 doubles (256 bits). Using the intrinsic function `_mm256_loadu_pd` we can load 4 doubles into our register. After loading all our data into the registers we can use `_mm256_add_pd` to add all 8 doubles together simultaneously in the same clock cycle. The complete intrinsics code:
+The algorithms solving this problem are implemented using all selected implementations of the programming paradigms (Highway, EVE, Xsimd, std::experimental::simd, auto-vectorization, inline assembly, intrinsis, OpenMP directives). The solutions written using auto-vectorization, no vectorization, and OpenMP directives use the same logic but compile to completely different assembly. When writing this algorithm using intrinsics, assembly, or any high-level library however, the logic has to change significantly. This is because auto vectorized code, unvectorized code, and code written using OpenMP directives all use scalar logic. Contrarily, intrinsics, assembly, and SIMD libraries give you direct access to the SIMD assembly instructions meaning they cannot follow the same logic. As an example take the `__m256d` SIMD registers ability to store precisely 4 doubles (256 bits). Using the intrinsic function `_mm256_loadu_pd` we can load 4 doubles into our register. After loading all our data into the registers we can use `_mm256_add_pd` to add all 8 doubles together simultaneously in the same clock cycle. The complete intrinsics code is:
 ```c++
 __m256d a = _mm256_loadu_pd(&data_a[0]);
 __m256d b = _mm256_loadu_pd(&data_b[0]);
 __m256d r = _mm256_add_pd(a, b);
 _mm256_storeu_pd(&result[0], r);
 ```
-This same logic is also applied if you analyse the assembly of the auto-vectorized solution even though it was written with scalar logic. Consider an alternative algorithm where two vectors storing 3 doubles have to be added together. As the programmer, one can reason that padding both vectors with an extra 0 at the end will not change the outcome significantly and can adjust for this. However, compilers cannot. It becomes apparent that it is impossible to follow the same logic scalar solutions implement using vectorized solutions. Regardless, each solution to each problem in each paradigm was implemented making sure the output and logic was followed as closely as possible.
+This same logic also applies when analysing the assembly of the auto-vectorized solution even though it is written using scalar logic. Consider an alternative algorithm where two vectors storing 3 doubles have to be added together. As the programmer, one can reason that padding both vectors with an extra 0 at the end will not change the outcome significantly and can adjust for this. However, compilers cannot. It becomes apparent that it is impossible to follow the same logic scalar solutions implement, using vectorized solutions. Regardless, each solution to each problem in each paradigm was implemented making sure the output and logic was followed as closely as possible.
 
-The problems were particularly selected because the optimal solution makes use of various specific AVX2 assembly instructions. Using this approach we are essentially testing whether each SIMD programming paradigm is effectively able to implement these specific AVX2 assembly instructions. The discussion includes a detailed breakdown of each problem and the algorithms implemented.
+The problems were particularly selected because the optimal solution makes use of various specific AVX2 assembly instructions. Using this approach we are essentially testing whether each SIMD programming paradigm is effectively able to implement these specific AVX2 assembly instructions. The discussion includes a detailed breakdown of each problem and of the algorithms implemented.
 
-It is also important to note that each library and programming paradigm requires different compilation flags. As an example, when compiling the un-vectorized solution, passing flags which explicitly instruct GCC to auto-vectorize the code will result in a failed experiment. The exact command used to compile each solution is in a comment at the top of each implementation.
+It is also important to note that each library and programming paradigm requires different compilation flags. As an example, when compiling the un-vectorized solution, passing flags which explicitly instruct GCC to auto-vectorize the code will result in a failed experiment. The exact command used to compile each solution can be found in a comment at the top of each implementation.
 
 ### Running the benchmarks
 
-To run the experiment reproducibly, a bash script was written. The bash script first sets the cpu frequency to a 'performance' mode to reduce variation, ensures the cpu does not go to sleep during the experiment, and sets the aforementioned environment variables for Google benchmark. Then consecutively executing each benchmarks binary.
+To run the experiment reproducibly, a bash script was written. The bash script first sets the cpu frequency to a 'performance' mode to reduce variation, ensures that the cpu does not go to sleep during the experiment, and sets the aforementioned environment variables for Google benchmark. Then consecutively executing each benchmarks binary.
 ```bash
 #!/bin/bash
 sudo cpupower frequency-set --governor performance
@@ -282,7 +282,7 @@ sudo cpupower frequency-set --governor powersave
 xset s 60 60 +dpms
 ```
 
-Finally, to run the experiment use the commands:
+Finally, to run the experiment the following commands are used:
 ```
 $sudo chmod 777 benchmark.sh
 $sudo ./benchmark.sh
@@ -292,96 +292,92 @@ $sudo ./benchmark.sh
 
 ### The metrics
 
-As mentioned in the methodology, the execution time of each solution was measured. To compare each solution, the median of the unvectorized solutions execution time was used as a baseline. Dividing the unvectorized solutions median by all other results of all other solutions in that benchmark results in the 'speed up' over the baseline. This metric was not used in any statistical test, only for representation.
+As mentioned in the section "Research approach and methods", the execution time of each solution was measured. To compare each solution, the median of the unvectorized solutions execution time was used as a baseline. Dividing the unvectorized solutions median by all other results of all other solutions in that benchmark results in the 'speed up' over the baseline. This metric was not used in any statistical test, and serves only for representation purposes.
 
-Brief analysis of the data reveals that the variance of the execution time of each solution was not normally distributed, but instead heavily positively skewed. Furthermore, the variance was not homogeneous thus a nonparametric test is required. The nonparametric Kruskal-Wallis test assumes non-normally distributed data, non-homogeneous variance, two or more independent groups, similar distribution across groups, and randomly selected independent samples. These assumptions are similar to the popular Mann-Whitney U test, as the Kruskal-Wallis test is the same as the Mann-Whitney U test but designed for more than two independent samples. Hence, the Kruskal-Wallis test was used to determine whether the population medians are equal (null hypothesis).
+Brief analysis of the data reveals that the variance of the execution time of each solution is not normally distributed, but instead heavily positively skewed. Furthermore, the variance is not homogeneous thus a nonparametric test is required. The nonparametric Kruskal-Wallis test assumes non-normally distributed data, non-homogeneous variance, two or more independent groups, similar distribution across groups, and randomly selected independent samples. These assumptions are similar to the popular Mann-Whitney U test, as the Kruskal-Wallis test is the same as the Mann-Whitney U test but designed for more than two independent samples. Hence, the Kruskal-Wallis test was used to determine whether the population medians are equal (null hypothesis).
 
 \newpage
 ### Benchmark: Add vectors
 
 \begin{center}
-Figure 1. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'add vectors' problem.
+\it{Figure 1. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'add vectors' problem.}
 \end{center}
   ![](BMAddVectors_bar.png)
 
 Figure 1 indicates that the solution compiled using auto vectorization, and the solution written using the std::experimental::simd library executed 4.0x faster than the unvectorized solution. The solution written using the EVE library had the same median execution time (1.002x) as the unvectorized solution. The solutions written using: OpenMP directives, highway, intrinsics, and xsimd all exhibited between a 1.33x and a 1.39x increase in execution time over the unvectorized solution. Lastly, the solution written using inline assembly executed 3.17x faster than the unvectorized solution.
 
 \begin{center}
-Figure 2. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'add vectors' problem.
+\it{Figure 2. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'add vectors' problem.}
 \end{center}
   ![](BMAddVectors_hist.png)
 
-Figure 2 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, figure 2 indicates that the population medians are not equal (Kruskal-Wallis: p-value < 2.2e-16).
+Figure 2 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, Figure 2 indicates that the median execution times are not equal (Kruskal-Wallis: p-value < 2.2e-16).
 
 ### Benchmark: Find in vector
 
 \begin{center}
-Figure 3. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'find in vector' problem using the sub-optimal algorithm.
+\it{Figure 3. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'find in vector' problem using the sub-optimal algorithm.}
 \end{center}
   ![](BMFindInVector_box.png)
 
 Figure 3 indicates that the solutions written using EVE, Highway, and intrinsics executed between 10.59 and 10.63x faster than the unvectorized solution. The solution written using std::experimental::simd executed 9.4x faster than the unvectorized solution. The solution written using Xsimd executed 8.44x faster than the unvectorized solution. Lastly, the solution compiled with auto-vectorization and the solutions written using inline assembly and OpenMP directives all executed between 6.59 and 9.96x faster than the unvectorized solution. Contrary to expectation, the solution written using inline assembly executed the slowest in this comparison. This is likely due to human error.
 
 \begin{center}
-Figure 4. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'find in vector' problem using the sub-optimal algorithm.
+\it{Figure 4. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'find in vector' problem using the sub-optimal algorithm.}
 \end{center}
   ![](BMFindInVector_hist.png)
 
-Figure 4 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, figure 2 indicates that the population medians are not equal (Kruskal-Wallis: p-value < 2.2e-16).
+Figure 4 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, Figure 4 indicates that the median execution times are not equal (Kruskal-Wallis: p-value < 2.2e-16).
 
 ### Benchmark: Find in vector faster
 
 \begin{center}
-Figure 5. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'find in vector' problem using the optimal algorithm.
+\it{Figure 5. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'find in vector' problem using the optimal algorithm.}
 \end{center}
   ![](BMFindInVectorFaster_box.png)
 
-Contrary to figure 3, figure 5 depicts rather expected results. The optimal algorithm which can only be implemented using SIMD logic directly was used in this benchmark, explaining the sudden observed disparity between the paradigms which use scalar and simd logic. The solutions written using EVE, Highway, and inline assembly executed between 15.54x and 16.32x faster than the unvectorized solution. Interestingly, the solution written using intrinsics executed 13.9x faster than the unvectorized solution. Both the solutions written using std::experimental::simd and xsimd libraries executed 11.10-11.19x faster than the unvectorized solution. Lastly, both the auto vectorized and OpenMp directives solutions executed 6.94-9.96x faster than the unvectorized solution.
+Contrary to Figure 3, Figure 5 depicts rather expected results. The optimal algorithm which can only be implemented using SIMD logic directly was used in this benchmark, explaining the sudden observed disparity between the paradigms which use scalar and simd logic. The solutions written using EVE, Highway, and inline assembly executed between 15.54x and 16.32x faster than the unvectorized solution. Interestingly, the solution written using intrinsics executed 13.9x faster than the unvectorized solution. Both the solutions written using std::experimental::simd and xsimd libraries executed 11.10-11.19x faster than the unvectorized solution. Lastly, both the auto vectorized and OpenMp directives solutions executed 6.94-9.96x faster than the unvectorized solution.
 
 \begin{center}
-Figure 6. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'find in vector' problem using the optimal algorithm.
+\it{Figure 6. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'find in vector' problem using the optimal algorithm.}
 \end{center}
   ![](BMFindInVectorFaster_hist.png)
 
-Figure 6 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, figure 2 indicates that the population medians are not equal (Kruskal-Wallis: p-value < 2.2e-16).
+Figure 6 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, Figure 6 indicates that the median execution times are not equal (Kruskal-Wallis: p-value < 2.2e-16).
 
 ### Benchmark: Reverse vector
 
 \begin{center}
-Figure 7. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'reverse vector' problem.
+\it{Figure 7. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'reverse vector' problem.}
 \end{center}
   ![](BMReverseVector_box.png)
 
 Similarly to the last benchmark, Figure 7 reveals that the problem of reversing a vector can benefit from programming using SIMD logic directly. This was not observed with all the SIMD libraries as std::experimental::simd interestingly executed 0.375x faster than the unvectorized code. The solutions compiled using auto-vectorization and OpenMP directives executed between 7.145x and 7.112x faster than the unvectorized solution. The solutions written using EVE, and Highway executed between 8.167x and 8.175x faster than the unvectorized solution. The solutions written using intrinsics and Xsimd executed between 7.98 and 7.53x faster than the unvectorized solution. Lastly, the solution written using inline assembly executed 6.192x faster than the unvectorized solution.
 
 \begin{center}
-Figure 8. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'reverse vector' problem.
+\it{Figure 8. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'reverse vector' problem.}
 \end{center}
   ![](BMReverseVector_hist.png)
 
-std::experimental::simd is excluded from figure 8 to prevent warping the scale as the median execution time (4110 nanoseconds) was lower than the unvectorized solutions median execution time (1540 nanoseconds). Figure 8 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, figure 2 indicates that the population medians are not equal (Kruskal-Wallis: p-value < 2.2e-16).
+std::experimental::simd is excluded from Figure 8 to prevent warping the scale as the median execution time (4110 nanoseconds) was lower than the unvectorized solutions median execution time (1540 nanoseconds). Figure 8 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, Figure 8 indicates that the median execution times are not equal (Kruskal-Wallis: p-value < 2.2e-16).
 
 ### Benchmark: Sum vector
 
 \begin{center}
-Figure 9. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'sum vector' problem.
+\it{Figure 9. Median speed up of the solutions written with each programming paradigm implementation (library) over the unvectorized baseline solution to the 'sum vector' problem.}
 \end{center}
   ![](BMSumVector_box.png)
 
 Contrary to the last benchmark, the solution implemented using std::experimental::simd boasts an execution time 16.59x faster than the unvectorized solution. The solutions implemented using EVE, Highway, Intrinsics, and Xsimd executed between 12.28x and 12.38x faster than the unvectorized solution. The solutions compiled using auto-vectorization, and OpenMP directives executed between 8.4x and 8.548x faster than the unvectorized solution. Lastly and suprisingly, the solution written using inline assembly executed 6.72x faster than the unvectorized solution, again likely due to human error.
 
 \begin{center}
-Figure 10. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'sum vector' problem.
+\it{Figure 10. Histogram of execution time, grouped by the solutions written in each programming paradigm implementation (library) to the 'sum vector' problem.}
 \end{center}
   ![](BMSumVector_hist.png)
 
-Figure 10 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, figure 2 indicates that the population medians are not equal (Kruskal-Wallis: p-value < 2.2e-16).
+Figure 10 gives an indication that the execution times are not normally distributed, and the variances are not equal (Levene: p-value < 2.2e-16). Furthermore, Figure 10 indicates that the median execution times are not equal (Kruskal-Wallis: p-value < 2.2e-16).
 
-//TODO: Find out how verbose I should be when describing the figures. Using words like 'speed up' altough un-academic would shorten these paragraphs and make them a lot more legible. Now on second thought, using words like speed up, increase over baseline, AND 'faster than the unvectorized solution' will be very confusing for the reader. Keep it consistent. It reaaaally doesn't flow, looks like its copy pasted from some script... How to fix? 
-
-//NOTE: You can also just do the description of the histogram figures only once as they are all (almost) identical.
-
-//TODO: Mention that the raw data and analysis R script are both in the project files ;)
+The primary data along with the R script used to generate the figures and preform the statistical analysis can be found in the project files.
 
 ## Discussion
 
@@ -399,13 +395,13 @@ Then to store the result in `double result[4]` to give:
 double result[4] = {2.0,4.0,6.0,8.0};
 ```
 
-The optimal solution using scalar logic is to iterate from 0 to 4, and set `result[i] = data_a[i] + data_b[i]`. When using vectorized logic the optimal solution changes since we are able to process a Single Instruction across Multiple pieces of Data (S.I.M.D) in one clock cycle. Using the AVX2 instruction set, we can load all four doubles into a 256 bit register using the intrinsic function `__m256d a = _mm256_loadu_pd(&data_a[0])`. Doing this for both `data_a` and `data_b` allows us to use the intrinsic function `_m256d r = _mm256_add_pd(a, b)` to add each value in each register together to solve the problem. Finally, `_mm256_storeu_pd(&result[0], r)` stores the result into our `result` array. 
+The optimal solution using scalar logic is to iterate from 0 to 4, and set `result[i] = data_a[i] + data_b[i]`. When using vectorized logic the optimal solution changes since we are able to process a Single Instruction across Multiple pieces of Data (S.I.M.D) in one clock cycle. The following approach was used in the solutions implemented using programming paradigms that allow the use of SIMD logic directly. Using the AVX2 instruction set, we can load all four doubles into a 256 bit register using the intrinsic function `__m256d a = _mm256_loadu_pd(&data_a[0])`. Doing this for both `data_a` and `data_b` allows us to use the intrinsic function `_m256d r = _mm256_add_pd(a, b)` to add each value in each register together to solve the problem. Finally, `_mm256_storeu_pd(&result[0], r)` stores the result into our `result` array. 
 
 Translating the intrinsic functions into assembly we can see that not every intrinsic function maps to one assembly instruction. For example, loading and storing each value into a 256 bit register takes four `vmovsd` assembly instructions. The only intrinsic function which maps to a single assembly instruction in the aforementioned solution is `_mm256_add_pd` mapping directly to `vaddpd`.
 
-Instead the optimal unvectorized solution uses the assembly instruction `movsd` twice to load one value from both the input arrays into a 64 bit register. Then using `addsd` both registers can be summed and stored into the result using another `movsd` instruction. Repeating this process four times gives us the desired result.
+Instead, the optimal unvectorized solution uses the assembly instruction `movsd` twice to load one value from both the input arrays into a 64 bit register. Then using `addsd`, both registers can be summed and stored into the result, using another `movsd` instruction. Repeating this process four times gives us the desired result.
 
-From this we can logically deduce that a theoretical execution time using SIMD instructions should be 4x faster than the unvectorized solution. This is precisely what was observed in figure 1 where both the auto-vectorized solution as well as the solution written using std::experimental::simd executed 4x faster than the unvectorized solution.
+From this we can logically deduce that a theoretical execution time using SIMD instructions should be 4x faster than the unvectorized solution. This is precisely what was observed in Figure 1 where both the auto-vectorized solution as well as the solution written using std::experimental::simd was executed 4x faster than the unvectorized solution.
 
 Analyzing the assembly of each compiled solution reveals that all vectorized solutions are making use of the `vaddpd` assembly instruction and use the optimal approach. Infact, the solutions written using: Highway, std::experimental::simd, Xsimd, and intrinsics compiled to practically identical assembly:
 
@@ -443,7 +439,7 @@ intrinsics:
     dec     rax
 ```
 
-It is important to note that these libraries had largely varying execution times as seen in figure 1 and 2. Suprisingly, the auto-vectorized solution used more assembly instructions, thus likely more clock cycles, but boasts the fastest median execution time.
+It is important to note that these libraries had largely varying execution times as seen in Figures 1 and 2. Suprisingly, the auto-vectorized solution used more assembly instructions, thus likely more clock cycles, but boasts the fastest median execution time.
 
 ```assembly
 Auto-vec:
@@ -464,7 +460,7 @@ Auto-vec:
     dec         rax
 ```
 
-This indicates that the implementation of the algorithm is not the only factor affecting the execution time. It is likely that due to the simplicity of this problem, the execution time was largely influenced by the overhead of loading the library used to implement the solution. The solutions compiled using auto-vectorization and written using std::experimental::simd executed the fastest, further supporting this theory. Auto-vectorization has no overhead due to it being a compilation process. Simlarly, std::experimental::simd is a small library comparitavely to the other libraries tested and is part of the standard libray. However, the median execution time of the solution compiled using OpenMP directives does not align with this theory.
+This indicates that the implementation of the algorithm is not the only factor affecting the execution time. It is likely that due to the simplicity of this problem, the execution time was largely influenced by the overhead of loading the library used to implement the solution. The solutions compiled using auto-vectorization and written using std::experimental::simd executed the fastest, further supporting this theory. Auto-vectorization has no overhead due to it being a compilation process. Simlarly, std::experimental::simd is a small library compared to the other libraries tested and is part of the standard libray. However, the median execution time of the solution compiled using OpenMP directives does not align with this theory. This leads to the alternate theory that due to the simplicity of the problem and absence of a 'hot loop', changes generated by the programming paradigm implementation outside of the core algorithm had a relatively large unpredictable effect on the execution time.
 
 ### Benchmark: Find in vector
 
@@ -489,9 +485,9 @@ The optimal solution using scalar logic is to do an iterative search through the
   }
 ```
 
-The sub-optimal approach using SIMD logic utilizes the SIMD concept of masking. The first step is to store 8 copies of the target value in a 256 bit register. Next we will iterate `4096` times but with an increment of 8. Every iteration we will load 8 integers into a 256 bit register. Using the assembly instruction `vpcmpeqd` we are able to compare the integers in the target vector against the newly loaded vector containing the 8 current values. `vpcmpeqd` returns a mask where any equal values are set to 1 and unequal values are set to 0. Using the assembly instruction `vmovmskps` which takes a large 32 bit mask and reduces it to an 8 bit mask, essentially returning 1 if any value in the mask is 1. From this, we can deduce if the target is within the current block of 8 integers. Lastly, using the assembly instructin `tzcnt` to get the index of the first 1 within the mask by counting the trailing zeros.
+The following sub-optimal approach was used in the solutions implemented using programming paradigms that allow the use of SIMD logic directly. The first step in this approach is to store 8 copies of the target value in a 256 bit register. Next we iterate `4096` times but with an increment of 8. Every iteration we will load 8 integers into a 256 bit register. Using the assembly instruction `vpcmpeqd` we are able to compare the integers in the target vector against the newly loaded vector containing the 8 current values. `vpcmpeqd` returns a mask where any equal values are set to 1 and unequal values are set to 0. Using the assembly instruction `vmovmskps` which takes a large 32 bit mask and reduces it to an 8 bit mask, essentially returning 1 if any value in the mask is 1. From this, we can deduce if the target is within the current block of 8 integers. Lastly, using the assembly instructin `tzcnt` to get the index of the first 1 within the mask by counting the trailing zeros.
 
-The proposed solution in assembly using SIMD instructions alongside comments for clarity:
+The proposed solution in assembly using SIMD instructions alongside comments for clarity is as follows:
 ```Assembly
   movd [target], xmm0            // Move target into xmm0 register
   vpermilps $0, xmm0, xmm0       // Duplicate the target integer across xmm0 register
@@ -519,13 +515,13 @@ The proposed solution in assembly using SIMD instructions alongside comments for
   jl 1b                          // Jump back if not reached end
 ```
 
-This approach was used to implement all SIMD solutions for this benchmark. Analyzing the assembly of each compiled solution reveals that all vectorized solutions are able to correctly make use of the `vpcmpeqd` assembly instruction and were able to somewhat recreate this approach. Contrary to 'add vectors' benchmark, the overall structure of the 'hot loop' of each solution is significantly different. Notably, the solutions compiled using auto-vectorization, written using OpenMP directives and Xsimd were not able to make use of the `vmovmskps` and `tzcnt` assembly instructions but instead used `vptest` followed by an iterative search to accomplish the same outcome. As depicted in figure 3, the solutions compiled using auto-vectorization, written using OpenMP directives and Xsimd also executed among the slowest.
+This approach was used to implement all SIMD solutions for this benchmark. Analyzing the assembly of each compiled solution reveals that all vectorized solutions are able to correctly make use of the `vpcmpeqd` assembly instruction and were able to somewhat recreate this approach. Contrary to 'add vectors' benchmark, the overall structure of the 'hot loop' of each solution is significantly different. Notably, the solutions compiled using auto-vectorization, written using OpenMP directives and Xsimd were not able to make use of the `vmovmskps` and `tzcnt` assembly instructions but instead used `vptest` followed by an iterative search to accomplish the same outcome. As depicted in Figure 3, the solutions compiled using auto-vectorization, written using OpenMP directives and Xsimd also executed among the slowest. These results align with the consensus of the existing literature.
 
 ### Benchmark: Find in vector faster
 
-The 'find in vector faster' benchmark requires each programming paradigm implementation (library) to solve the same problem as the previous benchmark 'find in vector' but using the optimal approach. The primary difference is using `vptest` instead of `vmovmskps`. Much like the scalar assembly instruction `test`, `vptest` tests if all elements in the 256 bit register are 0 by performing a bitwise AND. This by itself does not decrease the execution time, but both `vptest` and `vmovmskps` are bottlenecks in the hot loop. Due to the subtle change in the test logic we are now able to group neighbouring iterations of the loop together using bitwise OR and test them simultaneously using `vptest`. In theory, this greatly relieves pressure from the bottleneck. Instead of checking if 8 integers are equal to the target per iteration in the previous sub-optimal approach, the optimal approach is checking 32 integers per iteration.
+The 'find in vector faster' benchmark requires each programming paradigm implementation (library) to solve the same problem as the previous benchmark 'find in vector' but using the optimal approach. The following optimal approach was used in the solutions implemented using programming paradigms that allow the use of SIMD logic directly. The primary difference is using `vptest` instead of `vmovmskps`. Much like the scalar assembly instruction `test`, `vptest` tests if all elements in the 256 bit register are 0 by performing a bitwise AND. This by itself does not decrease the execution time, but both `vptest` and `vmovmskps` are bottlenecks in the hot loop. Due to the subtle change in the test logic we are now able to group neighbouring iterations of the loop together using bitwise OR and test them simultaneously using `vptest`. In theory, this greatly relieves pressure from the bottleneck. Instead of checking if 8 integers are equal to the target per iteration in the previous sub-optimal approach, the optimal approach is checking 32 integers per iteration.
 
-The annotated solution implemented using intrinsics for clarification:
+The proposed solution implemented using intrinsics alongside comments for clarity is as follows:
 ```C++
 void BM_FindInVectorFaster() {
   int target = 456;
@@ -577,9 +573,9 @@ void BM_ReverseVector() {
 }
 ```
 
-To solve this problem using SIMD logic we require permutations. The assembly instruction `vpshufd` copies each element from a source (first operand) to a destination (second operand) in an order specified in the third operand. Using this SIMD assembly instruction we are able reverse 8 integers simultaneously by specifying the order as `{7,6,5,4,3,2,1}`. Following this we can apply the same logic as in the scalar approach.
+The following approach was used in the solutions implemented using programming paradigms that allow the use of SIMD logic directly. The assembly instruction `vpshufd` copies each element from a source (first operand) to a destination (second operand) in an order specified in the third operand. Using this SIMD assembly instruction we are able reverse 8 integers simultaneously by specifying the order as `{7,6,5,4,3,2,1}`. Following this we can apply the same logic as in the scalar approach.
 
-The annotated solution implemented using intrinsics for clarification:
+The proposed solution implemented using intrinsics alongside comments for clarity is as follows:
 ```C++
 void BM_ReverseVector() {
   int N = 4096;
@@ -605,7 +601,7 @@ void BM_ReverseVector() {
 }
 ```
 
-Due to the similarity between the scalar and vectorized approach it is possible to logically deduce that a theoretical execution time using SIMD instructions should be 8x faster than the unvectorized solution. This is precisely what was observed in figure 7 where the solutions implemented using EVE, Highway and intrinsics executed 8x faster than the unvectorized solution.
+Due to the similarity between the scalar and vectorized approach it is possible to logically deduce that a theoretical execution time using SIMD instructions should be 8x faster than the unvectorized solution. This is precisely what was observed in Figure 7 where the solutions implemented using EVE, Highway and intrinsics executed 8x faster than the unvectorized solution.
 
 Analyzing the assembly of each compiled solution reveals that not all vectorized solutions are making use of the `vpshufd` assembly instruction as expected. Infact, the solutions written using EVE, Highway, intrinsics, and Xsimd compiled to practically identical assembly which does not include the `vpshufd` assembly instruction. Nonetheless, the aforementioned solutions are all executed among the fastest in this benchmark. It is possible that because the vector is reversed in-place, and never explicitly stored back in memory, that the compiler optimized this away.
 
@@ -651,7 +647,7 @@ Xsimd:
     cmp     ecx,eax
 ```
 
-The excluded solution written using std::experimental::simd compiled strangely. The hot loop contains an excessive amount of instructions not required nor explicitly implemented in the C++ code. Only the solutions compiled using auto-vectorization and OpenMP directives followed the expected optimal approach. Similarly to the previous benchmark, the solutions written using programming paradigm implementations (libraries) allowing the use of SIMD logic directly executed the fastest.
+The excluded solution written using std::experimental::simd compiled strangely. The hot loop contains an excessive amount of instructions not required, nor explicitly implemented, in the C++ code. Further investigation is required to reach a conclusion as to why the solution written using std::experimental::simd compiled in this way. Only the solutions compiled using auto-vectorization and OpenMP directives followed the expected optimal approach. Similarly to the previous benchmark, the solutions written using programming paradigm implementations (libraries) allowing the use of SIMD logic directly executed the fastest. These results align with the consensus of the existing literature.
 
 ### Benchmark: Sum vector
 
@@ -670,7 +666,7 @@ void BM_SumVector() {
 }
 ```
 
-The accumulator variable `int res` has to be updated before the next iteration can begin, largely preventing vectorization by adding a dependency between iterations. To resolve this, we can logicaly split the array into eight interleaved partitions to create 8 partial sums (vertical summation), which then sum to the final sum using horizontal summation. We can arbitrarily partition the array to further to remove dependency between iterations.
+The following approach was used in the solutions implemented using programming paradigms that allow the use of SIMD logic directly. The accumulator variable `int res` has to be updated before the next iteration can begin, largely preventing vectorization by adding a dependency between iterations. To resolve this, theoretically we can split the array into eight interleaved partitions to create 8 partial sums (vertical summation), which then sum to the final sum using horizontal summation. We can arbitrarily partition the array to further to remove dependency between iterations.
 
 The annotated intrinisics code for clarity:
 ```C++
@@ -751,7 +747,7 @@ std::experimental::simd:
     cmp    rax,rcx
 ```
 
-Similarly to the three previous benchmarks, the solutions written using programming paradigm implementations (libraries) allowing the use of SIMD logic directly executed the fastest.
+Similarly to the three previous benchmarks, the solutions written using programming paradigm implementations (libraries) allowing the use of SIMD logic directly executed the fastest. These results align with the consensus of the existing literature.
 
 ## Conclusion
 
@@ -759,9 +755,9 @@ The disparity between the results from the first benchmark 'add vectors' and the
 
 All benchmarks except the first 'add vectors' benchmark exhibited that the solutions written using programming paradigm implementations allowing the use of SIMD logic directly executed the fastest. From the solutions written using SIMD logic, the solutions written using high-level libraries consistenly executed slightly faster than the solutions written using intrinsics and inline assembly. Excluding the first benchmark, the solutions compiled using auto-vectorization and OpenMP directives consistently executed among the slowest. This result is expected and aligns well with the consensus of existing literature. Seemingly, given that the problem is sufficiently complex, solutions written using intrinsics and inline assembly can offer similar, if not faster, execution time than high-level libraries. Nonetheless, writing the solution using intrinsics or inline assembly is much more prone to error, significantly less portable, and definitely less maintainable.
 
-The present paper aims to compare and contrast the execution time of different SIMD programming paradigms that C++ developers have available to them when manipulating vectors. For this purpose we measured the execution time for different programming paradigm implementations and benchmarked them using simple vector manipulation algorithms. Unfortunately, to provide a definitive answer to the research question: "Which SIMD programming paradigm in C++ is the fastest benchmarked on various vector manipulation algorithms?" significantly more benchmarks are required. Seemingly, the answer to this question heavily depends on the complexity of the problem and host system. The conclusions deduced in the present paper are only valid for the benchmarks from which the deductions are made.
+The present paper aims to compare and contrast the execution time of different SIMD programming paradigms that C++ developers have available to them when manipulating vectors. For this purpose we measured the execution time for different programming paradigm implementations and benchmarked them using simple vector manipulation algorithms. However, to provide a definitive answer to the research question: "Which SIMD programming paradigm in C++ is the fastest benchmarked on various vector manipulation algorithms?" significantly more benchmarks are required. The analysis revealed that the answer to this question heavily depends on the complexity of the problem and host system. The conclusions deduced in the present paper are only valid for the benchmarks from which the deductions are made.
 
-SIMD programming is critical in performance optimization. Although auto-vectorization provides significant performance gains with minimal effort, to fully exploit the possible perfomance gain of SIMD, direct application of SIMD logic is essential. Unfortunately, this demands a deep understanding of SIMD and careful implementation to avoid potential pitfalls.
+SIMD programming is critical in performance optimization. Although auto-vectorization provides significant performance gains with minimal effort, to fully exploit the possible perfomance gain of SIMD, direct application of SIMD logic is essential. This demands a deep understanding of SIMD and careful implementation to avoid potential pitfalls.
 
 ## Bibliography
 
