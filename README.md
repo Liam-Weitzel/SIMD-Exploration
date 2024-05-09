@@ -825,7 +825,7 @@ Sebot, Julien, and Nathalie Drach-Temam. 2001. “Memory Bandwidth: The True Bot
 
 SimdJson. 2024. “Parsing Gigabytes of JSON per Second : Used by Facebook/Meta Velox, the Node.Js Runtime, ClickHouse, WatermelonDB, Apache Doris, Milvus, StarRocks.” May 9, 2024. https://github.com/simdjson/simdjson.
 
-Sneller. 2024. “World’s Fastest Log Analysis: λ + SQL + JSON + S3.” 2024. https://github.com/SnellerInc/sneller.
+Sneller. 2024. “World’s Fastest Log Analysis: Lambda + SQL + JSON + S3.” 2024. https://github.com/SnellerInc/sneller.
 
 Souza, P, L Borges, C Andreolli, and P Thierry. 2015. “Chapter 24-Portable Explicit Vectorization Intrinsics.” High Performance Parallelism Pearls, 463–85.
 
