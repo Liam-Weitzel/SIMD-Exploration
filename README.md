@@ -38,7 +38,7 @@ Pohl et al. (2016), similarly to this study, evaluates current SIMD programming 
 
 Auto-vectorization is when the compiler generates assembly that makes use of the SIMD registers. This SIMD programming paradigm is practically equivalent to programming without the knowledge of the SIMD register’s existence. Thus making auto-vectorization the most maintainable and most portable SIMD programming paradigm because the written code does not change. Unfortunately, reviewing the implementation of popular static single-assignment (SSA) based compilers highlights that given the information a compiler has at compile time, it is impossible to perfectly auto-vectorize. James Rainders, a former developer of Intel’s C/C++ compiler (ICC) auto-vectorization feature mentioned in a C++ conference in 2016 that there is “No magic compiler coming soon” (Garland, J. 2023, May 8-12).
 
-To answer the question of whether we can trust a compiler to vectorize our code, a basic understanding of how a compiler sees our code is required. The present paper is based on the models presented in Rastello et al. (2022) “SSA-based compiler design”. Given this understanding, a discussion of the vectorization methods used by popular compilers such as LLVM and GCC is discussed thoroughly in Wei et al. (2015). Wei et al. (2015) provides details about loop-level, function-level, and block-level optimization techniques used in compiler design to auto-vectorize our C++ code. Tayeb et al. (2023) discusses methods to improve auto-vectorization given irregular data access patterns. The IBM research report by Nuzman et al. (2005) discusses the challenges faced by auto-vectorizing compilers due to non-uniformity, limited data types, and memory access restrictions and provides an efficient method to handle non-contiguous data with power-of-2 strides while exploiting data reuse.
+To answer the question of whether we can trust a compiler to vectorize our code, a basic understanding of how a compiler sees our code is required. The present paper is based on the models presented in Rastello et al. (2022) “SSA-based compiler design”. Given this understanding, a discussion of the vectorization methods used by popular compilers such as LLVM and GCC is discussed thoroughly in Gao et al. (2015). Gao et al. (2015) provides details about loop-level, function-level, and block-level optimization techniques used in compiler design to auto-vectorize our C++ code. Tayeb et al. (2023) discusses methods to improve auto-vectorization given irregular data access patterns. The IBM research report by Nuzman et al. (2005) discusses the challenges faced by auto-vectorizing compilers due to non-uniformity, limited data types, and memory access restrictions and provides an efficient method to handle non-contiguous data with power-of-2 strides while exploiting data reuse.
 
 From reviewing the aforementioned sources, it is clear that automatic vectorization is a highly complex topic and has its limitations, and generally does not provide the performance increase that one would expect. To summarize, the primary reasons for this are:  
 1. Taking Intel's SIMD extended instructions as an example, the execution time required to implement vectorization of one 16-bit operation is 1/2 of the time of eight 16-bit operations, not 1/8 as would be expected.   
@@ -82,18 +82,16 @@ As announced by the C++ International Organization for Standardization (ISO) in 
 
 To be able to measure the performance of a program one first has to define a metric. Carrington et al. (2005) concludes that using a simple and single metric to represent a high performance compute (HPC) workload is 'inadequate', and that the use of an aggregation of various simple metrics will also peform poorly. Nonetheless, the 'simple' metric floating point operations per seconds (flops) is often used. Numrich et al. (2004) proposes a new metric which is based on 'computational action'. "We examine work as it evolves in time and compute computational action as the integral of the work function over time. We compare the action generated at less than full power with the action that could have been generated at full power. We claim that the goal of performance optimization is to minimize lost, or wasted, action". Drawing inspiration from Pohl et al. (2016), the present paper aims to evaluate the different SIMD programming paradigms using execution time, not taking into consideration the efficiency of the program, effectively circumnavigating the unstandardized nature of 'perfomance'.
 
-//TODO:  
-Sources of error  
-- Random vs systemic error  
-- Random error is unavoidable so we need to use statistics!!  
-- Why is it unavoidable?  
-  - Hardware jitter:  
-    - Intstruction pipelines: The pipeline fill level has an effect on the execution time for one instruction. Difference in CPU/memory bus clock cycles: The CPU clock cycle is different from the memory bus clock speed. Your CPU sometimes has to wait for the synchronization of memory accessess. CPU frequecy scaling and power management: These features cause heterogeneities in processing power. Shared hardware caches: Caches shared between multiple cores/ threads are subject to variance due to concurrent use. Larger memory segments may have variance in access times due to physical distance from CPU.  
-  - Additionally, OS activities can cause non-determinism. Some hardware interrupts require OS handling immediately after delivery. Migration of non-pinned processes can affect the performance of CPU hueristics.  
-SOURCE: https://www.chronox.de/jent/CPU-Jitter-NPTRNG.pdf (Müller, 2022)   
-OBSERVER EFFECT ALERT!! any time we observe something we are also changing the result... Because we are adding stuff to measure which adds overhead... This is not a problem though for us as we are keeping the instrumentation the same across all tests and we aren't worried about actual execution_time. just how they relate to each other. What libs are there?
-Hot vs cold performance, caching, branch preditiction. too many things can happen...
-Find more sources for all these
+Unlike the output of a process, the execution time of a process is never guaranteed to be the same. The sources of these variations are practically impossible to identify due the complexity of modern hardware and the laws of physics. This variation in execution time is commonly referred to as 'hardware jitter'. Hardware jitter is considered a random source of error due to it being impossible to adjust for (Müller 2022). Consequently, statistical tests are required to validate the accuracy of our results. The established reasons why 'hardware jitter' occurs are never ending. Bryce Adelstein Lelbach mentioned a few of the most prominent reasons at CppCon in 2015:  
+- The instruction pipeline in the CPUs 'fetch-decode-execute' cycle fill level has an effect on the execution time for one instruction.  
+- The CPU and memory bus clock speeds are not identical. Occasionally the CPU is required to wait a cycle due to this.  
+- Shared hardware caches cause variance due to concurrent use.  
+- Larger memory segments may have variance in access times due to physical distance from CPU.  
+- Additionally, a multitude of operating system activities cause non-determinism.  
+
+As shown by Asiatici et al. (2019), one of the most significant causes of variance is how many cache misses occur during the execution of the process. If the process is repetitive and uses a small amount of memory, which can all fit in a CPU cores L1 cache. The execution time will speed up significantly. Meaning that immediately consequent executions will generally be faster as the data being accessed is stored closer to the CPU. When the execution of a process has maximized its cache hit rate by consecutive executions it is considered to be running 'hot'.
+
+The observer effect specifies that measuring the execution time of a given function introduces overhead and effectively increases the execution time (Mytkowicz et al., 2010). This measurement bias is easily mitigated as the instrumentation can be standardized across all tests. This approach allows for relative comparisons of execution time without the need for any adjustments.
 
 ## Research approach and methods
 
@@ -399,7 +397,7 @@ The optimal solution using scalar logic is to iterate from 0 to 4, and set `resu
 
 Translating the intrinsic functions into assembly we can see that not every intrinsic function maps to one assembly instruction. For example, loading and storing each value into a 256 bit register takes four `vmovsd` assembly instructions. The only intrinsic function which maps to a single assembly instruction in the aforementioned solution is `_mm256_add_pd` mapping directly to `vaddpd`.
 
-Instead, the optimal unvectorized solution uses the assembly instruction `movsd` twice to load one value from both the input arrays into a 64 bit register. Then using `addsd`, both registers can be summed and stored into the result, using another `movsd` instruction. Repeating this process four times gives us the desired result.
+Instead, the optimal unvectorized solution uses the assembly instruction `movsd` twice to load one value from both the input arrays into a XMM (128 bit) register. Then using `addsd`, both registers can be summed and stored into the result, using another `movsd` instruction. Repeating this process four times gives us the desired result.
 
 From this we can logically deduce that a theoretical execution time using SIMD instructions should be 4x faster than the unvectorized solution. This is precisely what was observed in Figure 1 where both the auto-vectorized solution as well as the solution written using std::experimental::simd was executed 4x faster than the unvectorized solution.
 
@@ -761,58 +759,74 @@ SIMD programming is critical in performance optimization. Although auto-vectoriz
 
 ## Bibliography
 
-Garland, J. (2023, May 8-12) SIMD Libraries in C++ [Conference Presentation]. CppNow 2023, Aspen, Colorado, United States 
+Adelstein Lelbach, Bryson. 2015. “Benchmarking C++ Code.” In Bellevue, Washington, United States: CppCon.
 
-Breshears, C. (2020). How to Use the OpenMP Single Instruction Multiple Data (SIMD) Directive to Tell the Compiler What Code to Vectorize. [Online]. Intel.com. Available at: https://www.intel.com/content/www/us/en/developer/articles/technical/delve-into-mysteries-openmp-vec [Accessed 2 February 2024].
+Ashraf, Rizwan A., Roberto Gioiosa, Gokcen Kestor, Ronald F. Demara, Chen Yong Cher, and Pradip Bose. 2015. “Understanding the Propagation of Transient Errors in HPC Applications.” International Conference for High Performance Computing, Networking, Storage and Analysis, SC 15-20-November-2015 (November). https://doi.org/10.1145/2807591.2807670.
 
-Cppreference. (2018). SIMD library. [Online]. cppreference. Available at: https://en.cppreference.com/w/cpp/experimental/simd [Accessed 2 February 2024].
+Asiatici, Mikhail, and Paolo Ienne. 2019. “Stop Crying over Your Cache Miss Rate: Handling Efficiently Thousands of Outstanding Misses in FPGAS.” FPGA 2019 - Proceedings of the 2019 ACM/SIGDA International Symposium on Field-Programmable Gate Arrays, February, 310–19. https://doi.org/10.1145/3289602.3293901.
 
-Etiemble, D., 2018. 45-year CPU evolution: one law and two equations. arXiv preprint arXiv:1803.00254.
+Breshears, Clay P. 2020. “Delve into the Mysteries of OpenMP* Vectorization Support.” Intel, July. https://www.intel.com/content/www/us/en/developer/articles/technical/delve-into-mysteries-openmp-vectorization-support.html.
 
-GNU foundation. (n/a). 6.54 Using Vector Instructions through Built-in Functions. [Online]. gcc. Available at: https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html [Accessed 2 February 2024].
+cppreference. 2018. “SIMD Library - Cppreference.Com.” 2018. https://en.cppreference.com/w/cpp/experimental/simd.
 
-Intel. (2023). Intel® Core™ Ultra Processor Datasheet. Intel. 1(n/a). [Online]. Available at: https://www.intel.com/content/www/us/en/content-details/792044/intel-core-ultra-processor-datasheet- [Accessed 2 February 2024].
+Etiemble, Daniel. 2018. “45-Year CPU Evolution: One Law and Two Equations,” March. https://arxiv.org/abs/1803.00254v1.
 
-ISO/IEC. (2018). Programming Languages — Technical Specification for C++ Extensions for Parallelism. International Organization for Standardization. n/a(ISO/IEC TS 19570). [Online]. Available at: https://webstore.iec.ch/preview/info_isoiects19570%7Bed2.0%7Den.pdf [Accessed 2 February 2024].
+Falcou, Joel. 2023. “EVE: Expressive Vector Engine - SIMD in C++ Goes Brrrr.” 2023. https://github.com/jfalcou/eve.
 
-Jeffers, J., Reinders, J. and Sodani, A., 2016. Intel Xeon Phi processor high performance programming: knights landing edition. Morgan Kaufmann.
+Flynn, Michael J. 1972. “Some Computer Organizations and Their Effectiveness.” IEEE Transactions on Computers C–21 (9): 948–60. https://doi.org/10.1109/TC.1972.5009071.
 
-Kruse M, Finkel H. A proposal for loop-transformation pragmas. InEvolving OpenMP for Evolving Architectures: 14th International Workshop on OpenMP, IWOMP 2018, Barcelona, Spain, September 26–28, 2018, Proceedings 14 2018 (pp. 37-52). Springer International Publishing.
+Gao, Wei, Rong Cai Zhao, Lin Han, Jian Min Pang, and Rui Ding. 2015. “Research on SIMD Auto-Vectorization Compiling Optimization.” Ruan Jian Xue Bao/Journal of Software 26 (6): 1265–84. https://doi.org/10.13328/J.CNKI.JOS.004811.
 
-Kukunas, J., 2015. Power and performance: Software analysis and optimization. Morgan Kaufmann.
+Garland, Jeff. 2023. “SIMD Libraries in C++.” In Aspen, Colorado, United States: CppNow.
 
-Kusswurm, D. (2022). Modern Parallel Programming with C++ and Assembly Language. Canada: Apress Berkeley.
+GCC. n.d. “Vector Extensions (Using the GNU Compiler Collection (GCC)).” Accessed May 9, 2024. https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html.
 
-llvm. (n/a). Auto-Vectorization in LLVM. [Online]. llvm.org. Available at: https://llvm.org/docs/Vectorizers.html [Accessed 2 February 2024].
+Google. 2023. “Benchmark: A Microbenchmark Support Library.” 2023. https://github.com/google/benchmark.
 
-Martin, T., 2022. The designer's guide to the Cortex-M processor family. Newnes.
+Google. 2024. “Highway: Performance-Portable, Length-Agnostic SIMD with Runtime Dispatch.” 2024. https://github.com/google/highway.
 
-Microsoft. (2022). x86 intrinsics list. [Online]. Microsoft. Available at: https://learn.microsoft.com/en-us/cpp/intrinsics/x86-intrinsics-list?view=msvc-170 [Accessed 2 February 2024].
+Intel. 2024. “Intel® CoreTM Ultra Processor Datasheet.” https://www.intel.com/content/www/us/en/content-details/792044/intel-core-ultra-processor-datasheet-volume-1-of-2.html.
 
-Möller, R. (2016). Design of a low-level C++ template SIMD library. Universitat Bielefeld. 2(n/a). [Online]. Available at: https://www.ti.uni-bielefeld.de/downloads/publications/templateSIMD.pdf [Accessed 2 February 2024].
+ISO/IEC. 2018. “Programming Languages-Technical Specification for C++ Extensions for Parallelism COPYRIGHT PROTECTED DOCUMENT.”
 
-Nuzman, D., Rosen, I. and Zaks, A., 2006. Auto-vectorization of interleaved data for SIMD. ACM SIGPLAN Notices, 41(6), pp.132-143.
+Jeffers, Jim, James Reinders, and Avinash Sodani. 2016. “Intel Xeon Phi Coprocessor High-Performance Programming.”
 
-OpenMP. (2012). About. [Online]. openmp. Available at: https://www.openmp.org/about/ [Accessed 2 February 2024].
+Kretz, Matthias, and Axel Naumann. 2019. “Std::Experimental::Simd for GCC [ISO/IEC TS 19570:2018].” 2019. https://github.com/VcDevel/std-simd.
 
-Pohl, A., Cosenza, B., Mesa, M.A., Chi, C.C. and Juurlink, B., 2016, March. An evaluation of current SIMD programming models for C++. In Proceedings of the 3rd Workshop on Programming Models for SIMD/Vector Processing (pp. 1-8).
+Kruse, Michael, and Hal Finkel. 2018. “A Proposal for Loop-Transformation Pragmas.” Lecture Notes in Computer Science (Including Subseries Lecture Notes in Artificial Intelligence and Lecture Notes in Bioinformatics) 11128 LNCS (May): 37–52. https://doi.org/10.1007/978-3-319-98521-3_3.
 
-Rastello, F., Tichadou, F. (2022). SSA-based Compiler Design. Switzerland: Springer Cham.
+Kukunas, Jim. 2015. Power and Performance: Software Analysis and Optimization. 1st ed. San Francisco, CA, USA: Morgan Kaufmann Publishers Inc.
 
-Sebot, J. and Drach-Temam, N., 2001. Memory bandwidth: The true bottleneck of SIMD multimedia performance on a superscalar processor. In Euro-Par 2001 Parallel Processing: 7th International Euro-Par Conference Manchester, UK, August 28–31, 2001 Proceedings 7 (pp. 439-447). Springer Berlin Heidelberg.
+Kusswurm, Daniel. 2022. “Modern Parallel Programming with C++ and Assembly Language : X86 SIMD Development Using AVX, AVX2, and AVX-512,” March, 633.
 
-Some Computer Organizations and Their Effectiveness. (1972). Michael J. Flynn. IEEE Transactions on computers. 21(9). [Online]. Available at: https://users.cs.utah.edu/~hari/teaching/paralg/Flynn72.pdf [Accessed 2 February 2024].
+LLVM. n.d. “Auto-Vectorization in LLVM.” Accessed May 9, 2024. https://llvm.org/docs/Vectorizers.html.
 
-Souza, P., Borges, L., Andreolli, C. and Thierry, P., 2015. Chapter 24-portable explicit vectorization intrinsics. High Performance Parallelism Pearls, pp.463-485.
+Martin, Trevor. 2022. “The Designer’s Guide to the Cortex-M Processor Family, Third Edition.” The Designer’s Guide to the Cortex-M Processor Family, Third Edition, January, 1–624. https://doi.org/10.1016/C2020-0-02118-3.
 
-Stone, J.E., Perilla, J.R., Cassidy, C.K. and Schulten, K., 2017. GPU-accelerated molecular dynamics clustering analysis with OpenACC. In Parallel Programming with OpenACC (pp. 215-240). Morgan Kaufmann.
+Microsoft. 2022. “X86 Intrinsics List.” August 31, 2022. https://learn.microsoft.com/en-us/cpp/intrinsics/x86-intrinsics-list?view=msvc-170.
 
-Tayeb, H., Paillat, L. and Bramas, B., 2023. Autovesk: Automatic vectorized code generation from unstructured static kernels using graph transformations. ACM Transactions on Architecture and Code Optimization, 21(1), pp.1-25.
+Möller, Ralf. 2016. “Design of a Low-Level C++ Template SIMD Library This Document Relates to Release CODE12 of WarpingSIMDStandAlone,” January. www.ti.uni-bielefeld.de/html/people/moeller/tsimd_warpingsimd.html.
 
-Towner, D., Maslov, S., Saito, H., Burylov, I. (2018). P2638R0: Intel’s response to P1915R0 for std::simd parallelism in TS 2. Intel. n/a(P2638R0). [Online]. Available at: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf [Accessed 2 February 2024].
+Müller, Stephan. 2022. “CPU Time Jitter Based Non-Physical True Random Number Generator.”
 
-VcDevel. (2018). std::experimental::simd. [Online]. Github. Available at: https://github.com/VcDevel/std-simd?tab=readme-ov-file [Accessed 2 February 2024].
+Mytkowicz, Todd, Matthias Hauswirth, Peter F Sweeney, Matthias Ch, and Amer Diwan. 2010. “Observer Effect and Measurement Bias in Performance Analysis Observer Effect and Measurement Bias in Performance Analysis Observer Effect and Measurement Bias in Performance Analysis.” https://www.researchgate.net/publication/251193498.
 
-Wei, G., et al. (2015). Research on SIMD auto-vectorization compiling optimization. researchgate. n/a(n/a). [Online]. Available at: https://www.jos.org.cn/josen/article/pdf/4811 [Accessed 2 February 2024].
+Nuzman, Dorit, Ira Rosen, and Ayal Zaks. 2006. “Auto-Vectorization of Interleaved Data for SIMD.” ACM SIGPLAN Notices 2006 (June): 132–43. https://doi.org/10.1145/1133255.1133997.
 
-Yiu, J., 2009. The definitive guide to the ARM Cortex-M3. Newnes.
+OpenMP Architecture Review Boards. 2012. “OpenMP.” 2012. https://www.openmp.org/about/about-us/.
+
+Pohl, Angela, Biagio Cosenza, Mauricio Alvarez Mesa, Chi Ching Chi, and Ben Juurlink. 2016. “An Evaluation of Current SIMD Programming Models for C++.” https://doi.org/10.14279/depositonce-7091.
+
+Rastello, Fabrice, and Florent Bouchez Tichadou. 2022. “SSA-Based Compiler Design.” SSA-Based Compiler Design, January, 1–382. https://doi.org/10.1007/978-3-030-80515-9.
+
+Sebot, Julien, and Nathalie Drach-Temam. 2001. “Memory Bandwidth: The True Bottleneck of SIMD Multimedia Performance on a Superscalar Processor.” Lecture Notes in Computer Science (Including Subseries Lecture Notes in Artificial Intelligence and Lecture Notes in Bioinformatics) 2150: 439–47. https://doi.org/10.1007/3-540-44681-8_63.
+
+Souza, P, L Borges, C Andreolli, and P Thierry. 2015. “Chapter 24-Portable Explicit Vectorization Intrinsics.” High Performance Parallelism Pearls, 463–85.
+
+Stone, John E., Juan R. Perilla, C. Keith Cassidy, and Klaus Schulten. 2017. “GPU-Accelerated Molecular Dynamics Clustering Analysis with OpenACC.” Parallel Programming with OpenACC, 215–40. https://doi.org/10.1016/B978-0-12-410397-9.00011-1.
+
+Tayeb, Hayfa, Ludovic Paillat, and Bérenger Bramas. 2023. “Autovesk: Automatic Vectorized Code Generation from Unstructured Static Kernels Using Graph Transformations.” ACM Transactions on Architecture and Code Optimization 21 (1). https://doi.org/10.1145/3631709.
+
+Towner, Daniel, Sergey Maslov, Hideki Saito, and Ilya Burylov. 2018. “P2638R0: Intel’s Response to P1915R0 for Std::Simd Parallelism in TS 2.” https://gcc.gnu.org/git/.
+
+Xtensor Stack. 2024. “Xsimd: C++ Wrappers for SIMD Intrinsics and Parallelized, Optimized Mathematical Functions (SSE, AVX, AVX512, NEON, SVE)).” 2024. https://github.com/xtensor-stack/xsimd.
